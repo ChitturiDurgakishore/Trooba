@@ -2,7 +2,13 @@
 """Django's command-line utility for administrative tasks."""
 import os
 import sys
+from dotenv import load_dotenv
 
+load_dotenv() 
+
+SHOPIFY_STORE = os.getenv('SHOPIFY_STORE')
+SHOPIFY_API_VERSION = os.getenv('SHOPIFY_API_VERSION')
+SHOPIFY_ACCESS_TOKEN = os.getenv('SHOPIFY_ACCESS_TOKEN')
 
 def main():
     """Run administrative tasks."""
@@ -20,3 +26,5 @@ def main():
 
 if __name__ == '__main__':
     main()
+    
+    

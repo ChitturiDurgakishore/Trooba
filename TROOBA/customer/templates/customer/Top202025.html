@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Top Products From 2025 Onwards</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+  <div class="container py-4">
+    <h2 class="text-center mb-4">Top Products From Jan 1, 2024  To Dec 31 , 2024</h2>
+    <table class="table table-bordered table-striped">
+      <thead class="table-dark">
+        <tr>
+          <th>#</th>
+          <th>Product Title</th>
+          <th>Variant Title</th>
+          <th>SKU</th>
+          <th>Price</th>
+          <th>Vendor</th>
+          <th>Product Type</th>
+          <th>Quantity Sold</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+            <td>1</td>
+            <td>-</td>
+            <td>-</td>
+            <td>-</td>
+            <td>-</td>
+            <td>-</td>
+            <td>-</td>
+            <td>-</td>
+        </tr>
+        {% for product in products %}
+        <tr>
+          <td>{{ forloop.counter|add:1 }}</td>
+          <td>{{ product.product_title|default:"—" }}</td>
+          <td>{{ product.variant_title|default:"—" }}</td>
+          <td>{{ product.variant_sku|default:"—" }}</td>
+          <td>
+            {% if product.price is not None %}
+              ₹{{ product.price|floatformat:2 }}
+            {% else %}
+              —
+            {% endif %}
+          </td>
+          <td>{{ product.vendor|default:"—" }}</td>
+          <td>{{ product.product_type|default:"—" }}</td>
+          <td><strong>{{ product.total_quantity_sold }}</strong></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8" class="text-center text-muted">No data for 2025 onwards.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</body>
+</html>

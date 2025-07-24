@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Top 20 Products Till 2024</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+<body class="container mt-5">
+
+  <h2 class="mb-4">Top 20 Selling Products Till 2024 - "Upto 1-1-2024"</h2>
+
+  <table class="table table-bordered table-hover">
+    <thead class="table-dark">
+      <tr>
+        <th>#</th>
+        <th>Product Title</th>
+        <th>Product ID</th>
+        <th>Variant Title</th>
+        <th>SKU</th>
+        <th>Price</th>
+        <th>Vendor</th>
+        <th>Product Type</th>
+        <th>Total Quantity Sold</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for product in products %}
+      <tr>
+        <td>{{ forloop.counter }}</td>
+        <td>{{ product.product_title }}</td>
+        <td>{{ product.product_id }}</td>
+        <td>{{ product.variant_title }}</td>
+        <td>{{ product.variant_sku }}</td>
+        <td>₹{{ product.price }}</td>
+        <td>{{ product.vendor }}</td>
+        <td>{{ product.product_type }}</td>
+        <td>{{ product.total_quantity_sold }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <form method="post" action="/top-products-from-2024/">
+    {% csrf_token %}
+    <input type="hidden" name="products_json" id="products_json">
+
+    <div class="text-end mt-4">
+      <button type="submit" class="btn btn-primary">Next → View From Jan 2024 - Dec 2024</button>
+    </div>
+  </form>
+
+  <script>
+    const products = {{ products_json|safe }};
+    document.getElementById('products_json').value = JSON.stringify(products);
+  </script>
+
+</body>
+</html>

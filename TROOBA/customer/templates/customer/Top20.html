@@ -1,53 +1,144 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Top 20 Products Till 2024</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <meta charset="UTF-8">
+  <title>TROOBA | Top 20 Products Till 2024</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      background-color: #f0f2f5;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      color: #212529;
+    }
+
+    .brand-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+      border-bottom: 3px solid #0d6efd;
+      padding-bottom: 15px;
+    }
+
+    .brand-title {
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: #0d6efd;
+      letter-spacing: 1px;
+    }
+
+    .page-subtitle {
+      font-size: 1.1rem;
+      color: #6c757d;
+      text-align: right;
+    }
+
+    .content-box {
+      background-color: #fff;
+      border-radius: 12px;
+      padding: 25px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    }
+
+    .table thead th {
+      background-color: #343a40;
+      color: white;
+    }
+
+    .btn-next {
+      background: linear-gradient(to right, #0d6efd, #0a58ca);
+      color: #fff;
+      font-weight: 500;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      transition: all 0.3s ease;
+    }
+
+    .btn-next:hover {
+      background: linear-gradient(to right, #0a58ca, #084298);
+    }
+
+    .footer-action {
+      margin-top: 30px;
+      text-align: right;
+    }
+
+    @media (max-width: 768px) {
+      .brand-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .page-subtitle {
+        text-align: left;
+        margin-top: 10px;
+      }
+    }
+  </style>
 </head>
-<body class="container mt-5">
+<body class="container py-5">
 
-  <h2 class="mb-4">Top 20 Selling Products Till 2024 - "Upto 1-1-2024"</h2>
-
-  <table class="table table-bordered table-hover">
-    <thead class="table-dark">
-      <tr>
-        <th>#</th>
-        <th>Product Title</th>
-        <th>Product ID</th>
-        <th>Variant Title</th>
-        <th>SKU</th>
-        <th>Price</th>
-        <th>Vendor</th>
-        <th>Product Type</th>
-        <th>Total Quantity Sold</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for product in products %}
-      <tr>
-        <td>{{ forloop.counter }}</td>
-        <td>{{ product.product_title }}</td>
-        <td>{{ product.product_id }}</td>
-        <td>{{ product.variant_title }}</td>
-        <td>{{ product.variant_sku }}</td>
-        <td>₹{{ product.price }}</td>
-        <td>{{ product.vendor }}</td>
-        <td>{{ product.product_type }}</td>
-        <td>{{ product.total_quantity_sold }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-
-  <form method="post" action="/top-products-from-2024/">
-    {% csrf_token %}
-    <input type="hidden" name="products_json" id="products_json">
-
-    <div class="text-end mt-4">
-      <button type="submit" class="btn btn-primary">Next → View From Jan 2024 - Dec 2024</button>
+  <!-- Brand Header -->
+  <div class="brand-header">
+    <div class="brand-title">TROOBA</div>
+    <div class="page-subtitle">
+      Top 20 Selling Products Till Dec 31 2023 <br>
     </div>
-  </form>
+  </div>
 
+  <!-- Content Box -->
+  <div class="content-box">
+
+    <!-- Product Table -->
+    <div class="table-responsive">
+      <table class="table table-bordered table-hover align-middle">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Product Title</th>
+            <th>Product ID</th>
+            <th>Variant Title</th>
+            <th>SKU</th>
+            <th>Price</th>
+            <th>Vendor</th>
+            <th>Product Type</th>
+            <th>Total Quantity Sold</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for product in products %}
+          <tr>
+            <td>{{ forloop.counter }}</td>
+            <td>{{ product.product_title }}</td>
+            <td>{{ product.product_id }}</td>
+            <td>{{ product.variant_title }}</td>
+            <td>{{ product.variant_sku }}</td>
+            <td>₹{{ product.price }}</td>
+            <td>{{ product.vendor }}</td>
+            <td>{{ product.product_type }}</td>
+            <td>{{ product.total_quantity_sold }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Navigation Form -->
+    <form method="post" action="/top-products-from-2024/">
+      {% csrf_token %}
+      <input type="hidden" name="products_json" id="products_json">
+      <div class="footer-action">
+        <button type="submit" class="btn btn-next">
+          Next → View From Jan 2024 - Dec 2024
+        </button>
+      </div>
+    </form>
+
+  </div>
+
+  <!-- JavaScript to set hidden field -->
   <script>
     const products = {{ products_json|safe }};
     document.getElementById('products_json').value = JSON.stringify(products);

@@ -461,57 +461,56 @@ def fetch_historical_sales_till_2024(request):
         months_sorted = sorted(monthly_dict.keys())
         return [{"month": m, "quantity": monthly_dict[m]} for m in months_sorted]
 
-    def build_prompt(sku, title, monthly_history):
+    def build_prompt(sku, title, history):
      return f"""
-You are an advanced AI trained in **retail forecasting**, specializing in **fashion jewellery sales in India**. Your task is to estimate monthly sales for 2024 for a given SKU, based solely on its historical monthly sales up to Jan 1, 2024.
+You are an AI trained for **retail forecasting in the Indian fashion jewellery market**. Your task is to generate **accurate monthly sales predictions for the year 2024**, for the given SKU, based entirely on the sales history provided.
 
----
+--- 
 
 ## CONTEXT:
-Fashion jewellery sales behave differently than staples:
-- **Highly trend-driven** with sudden spikes or drops
-- **Seasonality** is tied to **festivals, weddings**, and **promotions**
-- A product’s success depends on **visibility, influencer campaigns**, **SKU lifecycle**, and **pricing**
-- **Long tail behavior**: Some SKUs have low but stable sales
-- **Zero or declining sales** should be interpreted realistically — not smoothed over
+Fashion jewellery sales in India are influenced by:
+- **Seasonality**: Festival & wedding spikes (e.g. Diwali, Akshaya Tritiya, Raksha Bandhan)
+- **Product Lifecycle**: Some SKUs fade quickly after launch, some sell steadily over time
+- **SKU Attributes**: Pricing, discounting patterns, product type, vendor
+- **Sales Events**: If the product sold heavily on a festival day, assume seasonality — not a trend
+- **Noisy Sales**: If a product sold only once or twice across many months, do not assume regular demand
 
 ---
 
 ## INPUT PRODUCT:
 - Product Title: "{title}"
 - SKU: {sku}
-- Product Category: Fashion Jewellery (non-essential)
+- Product Category: Fashion Jewellery
 - Region: India
 - Forecasting Year: 2024
-- Today's Date: January 1, 2024
+- Date of Forecast: January 1, 2024
 
 ---
 
-## MODELING PRINCIPLES:
-1. Use **actual monthly sales patterns** to understand trends.
-2. If sales are **declining or zero for multiple months**, treat it as SKU decline unless strong festive pattern exists.
-3. DO NOT assume uniform sales unless the SKU had consistent historical demand.
-4. If spikes were **promotion-driven** or **seasonal**, do not project them forward unless that event recurs.
-5. It's okay to predict **0 sales** for multiple months — accuracy matters over optimism.
-6. Consider **Indian jewellery demand peaks** (weddings, Diwali, Rakhi, Akshaya Tritiya).
-7. Follow **data-driven judgment** — do not "fill" missing months with average.
+## MODELING RULES (STRICT):
+1. Base your forecast **only on actual data**. Do not assume sales unless patterns justify it.
+2. Detect influence of features like **price**, **vendor**, **product type**, and **discount** if available.
+3. If **sales were driven by seasonal events** (Diwali, Weddings, etc.), only repeat if those events recur.
+4. If sales stopped in the last few months, consider it a **dying SKU** unless previously seasonal.
+5. If sales were consistent in past months but low, forecast accordingly — don’t overinflate.
+6. **Predict 0** if no demand signals exist.
+7. Focus on **clear explanations** — not general language.
 
 ---
 
-## FESTIVE CALENDAR (India, 2024):
+## FESTIVE EVENT CALENDAR (India, 2024):
 - Feb: Valentine’s Day → minor uplift
 - Mar: Holi, Women’s Day
-- Apr: Akshaya Tritiya → **high spike possible**
-- May–June: Summer Weddings
+- Apr: Akshaya Tritiya → strong uplift
+- May–June: Wedding Season
 - Aug: Raksha Bandhan, Onam
 - Oct: Dussehra
-- Nov: Karwa Chauth, Diwali → **major spike**
+- Nov: Karwa Chauth, Diwali → **major boost**
 - Dec: Winter Weddings, Christmas
 
 ---
 
-## OUTPUT FORMAT:
-Return a strict JSON format only. No explanations outside JSON. Structure:
+## OUTPUT FORMAT (STRICT JSON ONLY):
 
 {{
   "sku": "{sku}",
@@ -530,16 +529,25 @@ Return a strict JSON format only. No explanations outside JSON. Structure:
     "December": <integer>
   }},
   "total_predicted_quantity_2024": <integer>,
-  "reasoning": "<Short reasoning: explain seasonality effects, SKU lifecycle, sales pattern, and confidence level. Avoid general phrases.>"
+  "reasoning": "<Use logic from historical sales — include product decay, festival spikes, or steady growth if justified. Explain reasons for 0s if sales are absent or falling.>"
 }}
 
 ---
 
-## HISTORICAL MONTHLY SALES DATA:
-Use the following data for all predictions. DO NOT assume anything not seen in the numbers.
+## HISTORICAL SALES DATA:
+Use this **as your only input**. Do not assume any data not listed below. This includes:
 
-{json.dumps(monthly_history, indent=2)}
+- Sold Date
+- Quantity
+- Price
+- Product Title
+- Variant Title
+- Product Type
+- Vendor
+
+{json.dumps(history, indent=2)}
 """
+
 
 
     headers = {
@@ -615,6 +623,7 @@ Use the following data for all predictions. DO NOT assume anything not seen in t
 
 
 # ----------------------------------------------------------
+
 import os
 import json
 import requests
@@ -623,9 +632,7 @@ from datetime import datetime
 from django.shortcuts import render
 from django.utils.timezone import make_aware
 from dotenv import load_dotenv
-
-from .models import ProductVariant, OrderLineItem
-
+from .models import ProductVariant, OrderLineItem, Prompt  # 👈 include Prompt model
 
 def compare_sku_prediction_view(request, sku):
     load_dotenv()
@@ -645,19 +652,23 @@ def compare_sku_prediction_view(request, sku):
     cutoff = make_aware(datetime(2024, 1, 1))
     sales_qs = OrderLineItem.objects.filter(variant=variant, order__order_date__lt=cutoff)
     monthly_history = defaultdict(int)
-
     for item in sales_qs:
         month_str = item.order.order_date.strftime('%Y-%m')
         monthly_history[month_str] += item.quantity
 
     history_list = [{"month": m, "quantity": q} for m, q in sorted(monthly_history.items())]
 
-    # Step 2: Build Prompt (latest improved version)
+    # Step 2: Fetch Prompt Header and MainPrompt from database
+    header = Prompt.objects.filter(type="Header").first()
+    main_rules = Prompt.objects.filter(type="MainPrompt").first()
+
+    if not header or not main_rules:
+        return render(request, 'customer/compare.html', {'error': 'Prompt instructions missing in database.'})
+
+    # Step 3: Build prompt dynamically
     def build_prompt(sku, title, history):
         return f"""
-You are a domain-specific AI expert trained to predict fashion jewellery sales using statistical, trend-based, and behavioral data.
-
-Your job is to analyze the **actual past sales history** of a fashion jewellery SKU and estimate **realistic, conservative** monthly sales quantities for the year 2024 in the Indian market — with a focus on *accuracy over optimism*.
+{header.prompt}
 
 ---
 
@@ -670,30 +681,7 @@ Your job is to analyze the **actual past sales history** of a fashion jewellery 
 
 ---
 
-### STRICT MODELING RULES:
-1. Use actual sales quantities and timestamps (below) to understand seasonality and demand.
-2. If the product showed **declining sales** or **no sales in recent months**, assume demand is decreasing unless a strong seasonal pattern exists.
-3. Only project increased sales in months where:
-   - Past sales were high
-   - Indian festivals or wedding seasons boost jewelry demand
-   - Product has consistent monthly presence across multiple years
-4. **DO NOT overestimate**. If 2023 sales are low or erratic, reduce 2024 predictions accordingly.
-5. If past sales depended on **discounts**, and none are assumed in 2024, factor that drop.
-6. Prioritize accuracy over completeness. It's okay to predict zero sales if trends suggest it.
-7. Use reasoning like a demand forecaster: consider seasonality, saturation, and demand decay.
-8. DO NOT assume a uniform year — each month must be estimated based on *actual past behavior* and *festive calendar*.
-
----
-
-### INDIAN JEWELLERY SEASONALITY (Apply only when pattern supports it):
-- Feb: Valentine’s Day (mild boost)
-- Mar: Holi, Women’s Day
-- Apr: Akshaya Tritiya (high potential)
-- May: Wedding Season
-- Aug: Raksha Bandhan, Onam
-- Oct: Dussehra
-- Nov: Diwali, Karwa Chauth
-- Dec: Christmas + Winter weddings
+{main_rules.prompt}
 
 ---
 
@@ -722,11 +710,10 @@ Your job is to analyze the **actual past sales history** of a fashion jewellery 
 ---
 
 ### HISTORICAL SALES DATA:
-(Use this as your only quantitative input for forecasting)
 {json.dumps(history, indent=2)}
 """
 
-    # Step 3: Call Gemini
+    # Step 4: Call Gemini
     prediction_data = {
         "monthly_sales_2024": {},
         "total_predicted_quantity_2024": 0,
@@ -771,7 +758,7 @@ Your job is to analyze the **actual past sales history** of a fashion jewellery 
     except Exception as e:
         prediction_data["reasoning"] = f"[Unexpected Error] {str(e)}"
 
-    # Step 4: Actual sales for Jan–Dec 2024
+    # Step 5: Actual 2024 sales
     jan_2024 = make_aware(datetime(2024, 1, 1))
     jan_2025 = make_aware(datetime(2025, 1, 1))
 
@@ -786,7 +773,7 @@ Your job is to analyze the **actual past sales history** of a fashion jewellery 
         month = item.order.order_date.strftime('%B')
         actual_by_month[month] += item.quantity
 
-    # Step 5: Build comparison table
+    # Step 6: Build comparison list
     months = ["January", "February", "March", "April", "May", "June",
               "July", "August", "September", "October", "November", "December"]
 
@@ -809,3 +796,42 @@ Your job is to analyze the **actual past sales history** of a fashion jewellery 
         "total_actual": total_actual,
         "reasoning": prediction_data.get("reasoning", "")
     })
+
+
+
+from django.http import JsonResponse
+from django.utils.timezone import make_aware
+from datetime import datetime
+from .models import ProductVariant, OrderLineItem
+from collections import defaultdict
+
+def sku_sales_history(request, sku):
+    variant = ProductVariant.objects.select_related('product').filter(sku=sku).first()
+    if not variant:
+        return JsonResponse({'error': 'Invalid SKU'}, status=404)
+
+    cutoff_date = make_aware(datetime(2024, 1, 1))
+
+    sales_qs = OrderLineItem.objects.filter(
+        variant=variant,
+        order__order_date__lt=cutoff_date
+    ).select_related('order')
+
+    daily_sales = defaultdict(lambda: {"quantity": 0, "total_amount": 0.0})
+    
+    for item in sales_qs:
+        date_str = item.order.order_date.strftime('%Y-%m-%d')
+        daily_sales[date_str]["quantity"] += item.quantity
+        daily_sales[date_str]["total_amount"] += item.price * item.quantity
+
+    history = [
+        {"date": date, "quantity": data["quantity"], "total_amount": round(data["total_amount"], 2)}
+        for date, data in sorted(daily_sales.items())
+    ]
+
+    return JsonResponse({
+        "sku": sku,
+        "variant_title": variant.title,
+        "product_title": variant.product.title if variant.product else "",
+        "history": history
+    }, status=200)

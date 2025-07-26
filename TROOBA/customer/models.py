@@ -99,3 +99,7 @@ class SalesPrediction(models.Model):
 
     def __str__(self):
         return f"{self.product.title} on {self.date} @ {self.location.name}"
+    
+class Prompt(models.Model):
+    prompt=models.TextField(max_length=100000)
+    type=models.TextField(max_length=100,default="Header")

@@ -176,8 +176,8 @@ from .models import OrderLineItem, Product, ProductVariant
 
 def top_20_selling_products_till_2024_view(request):
     """
-    Returns top 20 selling variants (by quantity) before Jan 1, 2024.
-    Purely based on variant_id, not product_id.
+    Returns top 20 selling variants (by quantity) before Jan 1, 2024,
+    skipping variants with quantity exactly 46349.
     """
     cutoff_date = make_aware(datetime(2024, 1, 1))
 
@@ -187,15 +187,17 @@ def top_20_selling_products_till_2024_view(request):
         .filter(order__order_date__lt=cutoff_date)
         .values('variant_id')
         .annotate(total_quantity_sold=Sum('quantity'))
-        .order_by('-total_quantity_sold')[:20]
+        .order_by('-total_quantity_sold')
     )
 
-    variant_ids = [item['variant_id'] for item in top_variants]
+    # Step 2: Filter out unwanted quantity (46349) and slice to top 20
+    filtered_variants = [v for v in top_variants if v['total_quantity_sold'] != 46349][:10]
+    variant_ids = [item['variant_id'] for item in filtered_variants]
     variants = ProductVariant.objects.select_related('product').in_bulk(variant_ids)
 
-    # Step 2: Build result maintaining order
+    # Step 3: Build result maintaining order
     results = []
-    for item in top_variants:
+    for item in filtered_variants:
         variant = variants.get(item['variant_id'])
         product = variant.product if variant else None
 
@@ -668,8 +670,8 @@ def compare_sku_prediction_view(request, sku):
     # Step 3: Build prompt dynamically
     def build_prompt(sku, title, history):
         return f"""
-{header.prompt}
 
+{main_rules.prompt}
 ---
 
 ### PRODUCT DETAILS:
@@ -680,9 +682,6 @@ def compare_sku_prediction_view(request, sku):
 - Region: India
 
 ---
-
-{main_rules.prompt}
-
 ---
 
 ### OUTPUT FORMAT (STRICT JSON ONLY):

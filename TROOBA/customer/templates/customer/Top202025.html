@@ -2,156 +2,401 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>TROOBA | Products Sold in 2024</title>
+  <title>TROOBA | 2024 Product Analytics</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    body {
-      background-color: #f2f4f7;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    :root {
+      --primary: #4361ee;
+      --primary-dark: #3a56d4;
+      --secondary: #3f37c9;
+      --dark: #1f2937;
+      --light: #f9fafb;
+      --gray: #6b7280;
+      --light-gray: #e5e7eb;
+      --success: #10b981;
     }
-
-    .brand-header {
+    
+    body {
+      background-color: #f8fafc;
+      font-family: 'Inter', sans-serif;
+      color: var(--dark);
+      line-height: 1.6;
+    }
+    
+    .dashboard-container {
+      max-width: 1400px;
+      margin: 2rem auto;
+      padding: 0 1.5rem;
+    }
+    
+    /* Header Styles */
+    .dashboard-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-bottom: 2rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--light-gray);
+    }
+    
+    .brand-container {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    
+    .brand-logo {
+      width: 40px;
+      height: 40px;
+      background-color: var(--primary);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 700;
+      font-size: 1.2rem;
+    }
+    
+    .brand-title {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: var(--dark);
+      margin: 0;
+    }
+    
+    .page-subtitle {
+      font-size: 0.95rem;
+      color: var(--gray);
+      font-weight: 500;
+      margin: 0;
+    }
+    
+    .period-badge {
+      background-color: var(--primary);
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+    
+    /* Card Styles */
+    .dashboard-card {
+      background-color: white;
+      border-radius: 12px;
+      padding: 2rem;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.1);
+      margin-bottom: 2rem;
+      border: 1px solid var(--light-gray);
+    }
+    
+    .card-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      border-bottom: 3px solid #0d6efd;
-      padding-bottom: 15px;
-      margin-bottom: 30px;
+      margin-bottom: 1.5rem;
     }
-
-    .brand-title {
-      font-size: 2.5rem;
-      font-weight: 700;
-      color: #0d6efd;
+    
+    .card-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--dark);
+      margin: 0;
     }
-
-    .page-subtitle {
-      font-size: 1.1rem;
-      color: #6c757d;
-      text-align: right;
+    
+    .card-actions {
+      display: flex;
+      gap: 0.75rem;
     }
-
-    .content-box {
-      background-color: #fff;
-      border-radius: 12px;
-      padding: 25px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    
+    /* Table Styles */
+    .data-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
     }
-
-    .table th, .table td {
+    
+    .data-table thead th {
+      background-color: var(--primary);
+      color: white;
+      padding: 0.75rem 1rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.5px;
+      border: none;
+    }
+    
+    .data-table thead th:first-child {
+      border-top-left-radius: 8px;
+      border-bottom-left-radius: 8px;
+    }
+    
+    .data-table thead th:last-child {
+      border-top-right-radius: 8px;
+      border-bottom-right-radius: 8px;
+    }
+    
+    .data-table tbody tr {
+      transition: all 0.2s ease;
+    }
+    
+    .data-table tbody tr:hover {
+      background-color: rgba(67, 97, 238, 0.05);
+    }
+    
+    .data-table tbody td {
+      padding: 1rem;
+      border-bottom: 1px solid var(--light-gray);
       vertical-align: middle;
     }
-
-    .btn-success {
-      background: linear-gradient(to right, #198754, #157347);
-      border: none;
-      padding: 12px 24px;
-      font-size: 1rem;
+    
+    .data-table tbody tr:last-child td {
+      border-bottom: none;
+    }
+    
+    .product-title {
       font-weight: 500;
-      border-radius: 6px;
-      transition: 0.3s ease;
+      color: var(--dark);
     }
-
+    
+    .product-id {
+      font-family: 'Courier New', monospace;
+      color: var(--gray);
+      font-size: 0.85rem;
+    }
+    
+    .price-tag {
+      background-color: rgba(16, 185, 129, 0.1);
+      color: var(--success);
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-weight: 600;
+      font-size: 0.85rem;
+    }
+    
+    .quantity-badge {
+      font-weight: 600;
+      color: var(--dark);
+    }
+    
+    /* Button Styles */
+    .btn-primary {
+      background-color: var(--primary);
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+    
+    .btn-primary:hover {
+      background-color: var(--primary-dark);
+      transform: translateY(-1px);
+    }
+    
+    .btn-success {
+      background-color: var(--success);
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+    
     .btn-success:hover {
-      background: linear-gradient(to right, #157347, #0f5132);
+      background-color: #0e9f72;
+      transform: translateY(-1px);
     }
-
-    .footer-action {
-      margin-top: 30px;
-      text-align: right;
+    
+    .btn-outline-primary {
+      border: 1px solid var(--primary);
+      color: var(--primary);
+      background: transparent;
     }
-
+    
+    .btn-outline-primary:hover {
+      background-color: rgba(79, 70, 229, 0.1);
+    }
+    
+    .btn-icon {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    /* Footer */
+    .card-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 1.5rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--light-gray);
+    }
+    
+    .results-count {
+      color: var(--gray);
+      font-size: 0.85rem;
+    }
+    
+    /* Empty State */
+    .empty-state {
+      padding: 3rem;
+      text-align: center;
+      color: var(--gray);
+    }
+    
+    .empty-state-icon {
+      font-size: 2.5rem;
+      color: var(--light-gray);
+      margin-bottom: 1rem;
+    }
+    
+    /* Responsive */
     @media (max-width: 768px) {
-      .brand-header {
+      .dashboard-header {
         flex-direction: column;
         align-items: flex-start;
+        gap: 1rem;
       }
-
-      .page-subtitle {
-        text-align: left;
-        margin-top: 10px;
+      
+      .period-badge {
+        align-self: flex-start;
+      }
+      
+      .data-table {
+        display: block;
+        overflow-x: auto;
+      }
+      
+      .card-footer {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: flex-start;
       }
     }
   </style>
 </head>
-<body class="container py-5">
-
-  <!-- 🔷 Brand Header -->
-  <div class="brand-header">
-    <div class="brand-title">TROOBA</div>
-    <div class="page-subtitle">
-      Top Products From Jan 1, 2024 to Dec 31, 2024
-    </div>
-  </div>
-
-  <!-- 🔹 Content Section -->
-  <div class="content-box">
-
-    <!-- 📊 Product Table -->
-    <div class="table-responsive">
-      <table class="table table-bordered table-striped align-middle">
-        <thead class="table-dark">
-          <tr>
-            <th>#</th>
-            <th>Product Title</th>
-            <th>Variant Title</th>
-            <th>SKU</th>
-            <th>Price</th>
-            <th>Vendor</th>
-            <th>Product Type</th>
-            <th>Quantity Sold</th>
-            <th>Action</th>
-
-          </tr>
-        </thead>
-        <tbody>
-          {% for product in products %}
-          <tr>
-            <td>{{ forloop.counter }}</td>
-            <td>{{ product.product_title|default:"—" }}</td>
-            <td>{{ product.variant_title|default:"—" }}</td>
-            <td>{{ product.variant_sku|default:"—" }}</td>
-            <td>
-              {% if product.price is not None %}
-                ₹{{ product.price|floatformat:2 }}
-              {% else %}
-                —
-              {% endif %}
-            </td>
-            <td>{{ product.vendor|default:"—" }}</td>
-            <td>{{ product.product_type|default:"—" }}</td>
-            <td><strong>{{ product.total_quantity_sold }}</strong></td>
-            <td>
-  <a href="{% url 'compare_sku' product.variant_sku %}" class="btn btn-sm btn-outline-primary">
-    View Comparison →
-  </a>
-</td>
-          </tr>
-          {% empty %}
-          <tr>
-            <td colspan="8" class="text-center text-muted">No data available.</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-
-    <!-- 🔘 Predict Sales Form -->
-    <form method="post" action="/predict-2024-sales/">
-      {% csrf_token %}
-      <input type="hidden" id="variantSkusInput" name="variant_skus_json">
-      <div class="footer-action">
-        <button type="submit" class="btn btn-success">
-          Predict 2024 Monthly Sales →
-        </button>
+<body>
+  <div class="dashboard-container">
+    <!-- Dashboard Header -->
+    <header class="dashboard-header">
+      <div class="brand-container">
+        <div class="brand-logo">T</div>
+        <div>
+          <h1 class="brand-title">TROOBA</h1>
+          <p class="page-subtitle">2024 Product Performance Analysis</p>
+        </div>
       </div>
-    </form>
-
+      <div class="period-badge">
+        <i class="fas fa-calendar-alt me-2"></i> Jan 1 - Dec 31, 2024
+      </div>
+    </header>
+    
+    <!-- Main Content -->
+    <main>
+      <div class="dashboard-card">
+        <div class="card-header">
+          <h2 class="card-title">Top Selling Products</h2>
+          <div class="card-actions">
+            <button class="btn btn-sm btn-outline-secondary">
+              <i class="fas fa-download me-1"></i> Export
+            </button>
+            <button class="btn btn-sm btn-outline-secondary">
+              <i class="fas fa-filter me-1"></i> Filter
+            </button>
+          </div>
+        </div>
+        
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Product</th>
+                <th>Variant</th>
+                <th>SKU</th>
+                <th>Price</th>
+                <th>Type</th>
+                <th>Qty Sold</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for product in products %}
+              <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>
+                  <div class="product-title">{{ product.product_title|default:"—" }}</div>
+                  <div class="product-id">{{ product.product_id|default:"" }}</div>
+                </td>
+                <td>{{ product.variant_title|default:"—" }}</td>
+                <td>
+                  <code>{{ product.variant_sku|default:"—" }}</code>
+                </td>
+                <td>
+                  {% if product.price is not None %}
+                  <span class="price-tag">₹{{ product.price|floatformat:2 }}</span>
+                  {% else %}
+                  —
+                  {% endif %}
+                </td>
+                <td>{{ product.product_type|default:"—" }}</td>
+                <td>
+                  <span class="quantity-badge">{{ product.total_quantity_sold }}</span>
+                </td>
+                <td>
+                  {% if product.variant_sku %}
+                  <a href="{% url 'compare_sku' product.variant_sku %}" class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-chart-line me-1"></i> Compare
+                  </a>
+                  {% else %}
+                  <button class="btn btn-sm btn-outline-secondary" disabled>
+                    <i class="fas fa-ban me-1"></i> N/A
+                  </button>
+                  {% endif %}
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="8">
+                  <div class="empty-state">
+                    <div class="empty-state-icon">
+                      <i class="fas fa-box-open"></i>
+                    </div>
+                    <h4>No product data available</h4>
+                    <p class="text-muted">There are no products to display for the selected period</p>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        
+        <div class="card-footer">
+          <div class="results-count">Showing 1-{{ products|length }} of top products</div>
+          
+          <form method="post" action="/predict-2024-sales/">
+            {% csrf_token %}
+            <input type="hidden" id="variantSkusInput" name="variant_skus_json">
+            <button type="submit" class="btn btn-success btn-icon">
+              Predict Monthly Sales <i class="fas fa-arrow-right ms-1"></i>
+            </button>
+          </form>
+        </div>
+      </div>
+    </main>
   </div>
 
-  <!-- ✅ JS: Collect Only Variant SKUs -->
+  <!-- JavaScript -->
   <script>
+    // Collect variant SKUs for the prediction form
     const skus = [];
     {% for product in products %}
       {% if product.variant_sku %}
@@ -159,7 +404,25 @@
       {% endif %}
     {% endfor %}
     document.getElementById('variantSkusInput').value = JSON.stringify(skus);
+    
+    // Add subtle animation to table rows
+    document.querySelectorAll('.data-table tbody tr').forEach((row, index) => {
+      row.style.opacity = '0';
+      row.style.transform = 'translateY(10px)';
+      row.style.animation = `fadeInUp 0.3s ease forwards ${index * 0.05}s`;
+    });
+    
+    // Add CSS animation
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes fadeInUp {
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+    `;
+    document.head.appendChild(style);
   </script>
-
 </body>
 </html>

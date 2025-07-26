@@ -2,147 +2,345 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>TROOBA | Top 20 Products Till 2024</title>
+  <title>TROOBA | Product Analytics Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    body {
-      background-color: #f0f2f5;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      color: #212529;
+    :root {
+      --primary: #4361ee;
+      --primary-dark: #3a56d4;
+      --secondary: #3f37c9;
+      --dark: #1f2937;
+      --light: #f9fafb;
+      --gray: #6b7280;
+      --light-gray: #e5e7eb;
+      --success: #10b981;
     }
-
-    .brand-header {
+    
+    body {
+      background-color: #f8fafc;
+      font-family: 'Inter', sans-serif;
+      color: var(--dark);
+      line-height: 1.6;
+    }
+    
+    .dashboard-container {
+      max-width: 1400px;
+      margin: 2rem auto;
+      padding: 0 1.5rem;
+    }
+    
+    /* Header Styles */
+    .dashboard-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-bottom: 2rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--light-gray);
+    }
+    
+    .brand-container {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    
+    .brand-logo {
+      width: 40px;
+      height: 40px;
+      background-color: var(--primary);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 700;
+      font-size: 1.2rem;
+    }
+    
+    .brand-title {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: var(--dark);
+      margin: 0;
+    }
+    
+    .page-subtitle {
+      font-size: 0.95rem;
+      color: var(--gray);
+      font-weight: 500;
+      margin: 0;
+    }
+    
+    .period-badge {
+      background-color: var(--primary);
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+    
+    /* Card Styles */
+    .dashboard-card {
+      background-color: white;
+      border-radius: 12px;
+      padding: 2rem;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.1);
+      margin-bottom: 2rem;
+      border: 1px solid var(--light-gray);
+    }
+    
+    .card-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 30px;
-      border-bottom: 3px solid #0d6efd;
-      padding-bottom: 15px;
+      margin-bottom: 1.5rem;
     }
-
-    .brand-title {
-      font-size: 2.5rem;
-      font-weight: 700;
-      color: #0d6efd;
-      letter-spacing: 1px;
+    
+    .card-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--dark);
+      margin: 0;
     }
-
-    .page-subtitle {
-      font-size: 1.1rem;
-      color: #6c757d;
-      text-align: right;
+    
+    .card-actions {
+      display: flex;
+      gap: 0.75rem;
     }
-
-    .content-box {
-      background-color: #fff;
-      border-radius: 12px;
-      padding: 25px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    
+    /* Table Styles */
+    .data-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
     }
-
-    .table thead th {
-      background-color: #343a40;
+    
+    .data-table thead th {
+      background-color: var(--primary);
       color: white;
-    }
-
-    .btn-next {
-      background: linear-gradient(to right, #0d6efd, #0a58ca);
-      color: #fff;
+      padding: 0.75rem 1rem;
       font-weight: 500;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.5px;
       border: none;
-      padding: 12px 24px;
-      border-radius: 6px;
-      transition: all 0.3s ease;
     }
-
-    .btn-next:hover {
-      background: linear-gradient(to right, #0a58ca, #084298);
+    
+    .data-table thead th:first-child {
+      border-top-left-radius: 8px;
+      border-bottom-left-radius: 8px;
     }
-
-    .footer-action {
-      margin-top: 30px;
-      text-align: right;
+    
+    .data-table thead th:last-child {
+      border-top-right-radius: 8px;
+      border-bottom-right-radius: 8px;
     }
-
+    
+    .data-table tbody tr {
+      transition: all 0.2s ease;
+    }
+    
+    .data-table tbody tr:hover {
+      background-color: rgba(67, 97, 238, 0.05);
+    }
+    
+    .data-table tbody td {
+      padding: 1rem;
+      border-bottom: 1px solid var(--light-gray);
+      vertical-align: middle;
+    }
+    
+    .data-table tbody tr:last-child td {
+      border-bottom: none;
+    }
+    
+    .product-title {
+      font-weight: 500;
+      color: var(--dark);
+    }
+    
+    .product-id {
+      font-family: 'Courier New', monospace;
+      color: var(--gray);
+      font-size: 0.85rem;
+    }
+    
+    .price-tag {
+      background-color: rgba(16, 185, 129, 0.1);
+      color: var(--success);
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-weight: 600;
+      font-size: 0.85rem;
+    }
+    
+    /* Button Styles */
+    .btn-primary {
+      background-color: var(--primary);
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+    
+    .btn-primary:hover {
+      background-color: var(--primary-dark);
+      transform: translateY(-1px);
+    }
+    
+    .btn-icon {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    /* Footer */
+    .card-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 1.5rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--light-gray);
+    }
+    
+    .results-count {
+      color: var(--gray);
+      font-size: 0.85rem;
+    }
+    
+    /* Responsive */
     @media (max-width: 768px) {
-      .brand-header {
+      .dashboard-header {
         flex-direction: column;
         align-items: flex-start;
+        gap: 1rem;
       }
-
-      .page-subtitle {
-        text-align: left;
-        margin-top: 10px;
+      
+      .period-badge {
+        align-self: flex-start;
+      }
+      
+      .data-table {
+        display: block;
+        overflow-x: auto;
       }
     }
   </style>
 </head>
-<body class="container py-5">
-
-  <!-- Brand Header -->
-  <div class="brand-header">
-    <div class="brand-title">TROOBA</div>
-    <div class="page-subtitle">
-      Top 20 Selling Products Till Dec 31 2023 <br>
-    </div>
-  </div>
-
-  <!-- Content Box -->
-  <div class="content-box">
-
-    <!-- Product Table -->
-    <div class="table-responsive">
-      <table class="table table-bordered table-hover align-middle">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Product Title</th>
-            <th>Product ID</th>
-            <th>Variant Title</th>
-            <th>SKU</th>
-            <th>Price</th>
-            <th>Vendor</th>
-            <th>Product Type</th>
-            <th>Total Quantity Sold</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for product in products %}
-          <tr>
-            <td>{{ forloop.counter }}</td>
-            <td>{{ product.product_title }}</td>
-            <td>{{ product.product_id }}</td>
-            <td>{{ product.variant_title }}</td>
-            <td>{{ product.variant_sku }}</td>
-            <td>₹{{ product.price }}</td>
-            <td>{{ product.vendor }}</td>
-            <td>{{ product.product_type }}</td>
-            <td>{{ product.total_quantity_sold }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-
-    <!-- Navigation Form -->
-    <form method="post" action="/top-products-from-2024/">
-      {% csrf_token %}
-      <input type="hidden" name="products_json" id="products_json">
-      <div class="footer-action">
-        <button type="submit" class="btn btn-next">
-          Next → View From Jan 2024 - Dec 2024
-        </button>
+<body>
+  <div class="dashboard-container">
+    <!-- Dashboard Header -->
+    <header class="dashboard-header">
+      <div class="brand-container">
+        <div class="brand-logo">T</div>
+        <div>
+          <h1 class="brand-title">TROOBA </h1>
+          <p class="page-subtitle">Top performing products analysis</p>
+        </div>
       </div>
-    </form>
-
+      <div class="period-badge">
+        <i class="fas fa-calendar-alt me-2"></i> Till Dec 31, 2023
+      </div>
+    </header>
+    
+    <!-- Main Content -->
+    <main>
+      <div class="dashboard-card">
+        <div class="card-header">
+          <h2 class="card-title">Top 10 Selling Products</h2>
+          <div class="card-actions">
+            <button class="btn btn-sm btn-outline-secondary">
+              <i class="fas fa-download me-1"></i> Export
+            </button>
+            <button class="btn btn-sm btn-outline-secondary">
+              <i class="fas fa-filter me-1"></i> Filter
+            </button>
+          </div>
+        </div>
+        
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Product</th>
+                <th>Variant</th>
+                <th>SKU</th>
+                <th>Price</th>
+                <th>Type</th>
+                <th>Qty Sold</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for product in products %}
+              <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>
+                  <div class="product-title">{{ product.product_title }}</div>
+                  <div class="product-id">{{ product.product_id }}</div>
+                </td>
+                <td>{{ product.variant_title }}</td>
+                <td>
+                  <code>{{ product.variant_sku }}</code>
+                </td>
+                <td>
+                  <span class="price-tag">₹{{ product.price }}</span>
+                </td>
+                <td>{{ product.product_type }}</td>
+                <td>
+                  <strong>{{ product.total_quantity_sold }}</strong>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        
+        <div class="card-footer">
+          <div class="results-count">Showing 1-10 of top products</div>
+          
+          <form method="post" action="/top-products-from-2024/">
+            {% csrf_token %}
+            <input type="hidden" name="products_json" id="products_json">
+            <button type="submit" class="btn btn-primary btn-icon">
+              View 2024 Data <i class="fas fa-arrow-right ms-1"></i>
+            </button>
+          </form>
+        </div>
+      </div>
+    </main>
   </div>
 
-  <!-- JavaScript to set hidden field -->
+  <!-- JavaScript -->
   <script>
     const products = {{ products_json|safe }};
     document.getElementById('products_json').value = JSON.stringify(products);
+    
+    // Add subtle animation to table rows
+    document.querySelectorAll('.data-table tbody tr').forEach((row, index) => {
+      row.style.opacity = '0';
+      row.style.transform = 'translateY(10px)';
+      row.style.animation = `fadeInUp 0.3s ease forwards ${index * 0.05}s`;
+    });
+    
+    // Add CSS animation
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes fadeInUp {
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+    `;
+    document.head.appendChild(style);
   </script>
-
 </body>
 </html>

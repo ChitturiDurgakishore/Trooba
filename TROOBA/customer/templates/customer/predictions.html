@@ -1,0 +1,316 @@
+{% load custom_filters %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>TROOBA | Sales Forecast Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --primary: #4361ee;
+      --primary-dark: #3a56d4;
+      --secondary: #3f37c9;
+      --dark: #1f2937;
+      --light: #f9fafb;
+      --gray: #6b7280;
+      --light-gray: #e5e7eb;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --border-radius: 8px;
+      --box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f8fafc;
+      color: var(--dark);
+      line-height: 1.6;
+      margin: 0;
+      padding: 0;
+    }
+
+    .dashboard-container {
+      max-width: 1400px;
+      margin: 2rem auto;
+      padding: 0 1.5rem;
+    }
+
+    .dashboard-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+    }
+
+    .brand-container {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .brand-logo {
+      width: 48px;
+      height: 48px;
+      background-color: var(--primary);
+      color: white;
+      border-radius: var(--border-radius);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+
+    .brand-title {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: var(--dark);
+      margin: 0;
+    }
+
+    .page-subtitle {
+      font-size: 0.95rem;
+      color: var(--gray);
+      font-weight: 500;
+      margin: 0;
+    }
+
+    .period-badge {
+      background-color: var(--primary);
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: var(--border-radius);
+      font-size: 0.85rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .dashboard-card {
+      background-color: white;
+      border-radius: var(--border-radius);
+      box-shadow: var(--box-shadow);
+      border: 1px solid var(--light-gray);
+      overflow: hidden;
+    }
+
+    .card-header {
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid var(--light-gray);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .card-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--dark);
+      margin: 0;
+    }
+
+    .card-actions {
+      display: flex;
+      gap: 0.75rem;
+    }
+
+    .btn {
+      padding: 0.5rem 1rem;
+      border-radius: var(--border-radius);
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      border: 1px solid transparent;
+    }
+
+    .btn-sm {
+      padding: 0.375rem 0.75rem;
+      font-size: 0.8rem;
+    }
+
+    .btn-outline-secondary {
+      border: 1px solid var(--light-gray);
+      color: var(--gray);
+      background-color: white;
+    }
+
+    .btn-outline-secondary:hover {
+      background-color: var(--light-gray);
+    }
+
+    .table-responsive {
+      overflow-x: auto;
+    }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .data-table thead th {
+      background-color: var(--primary);
+      color: white;
+      padding: 0.75rem 1.5rem;
+      font-weight: 500;
+      text-align: left;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .data-table tbody td {
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid var(--light-gray);
+      vertical-align: middle;
+      font-size: 0.9rem;
+    }
+
+    .data-table tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    .data-table tbody tr:hover {
+      background-color: rgba(67, 97, 238, 0.03);
+    }
+
+    .product-title {
+      font-weight: 500;
+      color: var(--dark);
+    }
+
+    .actual-sales-badge {
+      background-color: var(--light-gray);
+      color: var(--dark);
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-weight: 600;
+      font-size: 0.85rem;
+      display: inline-block;
+    }
+
+    .prediction-cell {
+      font-weight: 600;
+      color: var(--primary);
+    }
+
+    .alert {
+      padding: 1rem;
+      border-radius: var(--border-radius);
+      margin: 1rem;
+      font-size: 0.9rem;
+      background-color: rgba(245, 158, 11, 0.1);
+      color: var(--warning);
+      border-left: 4px solid var(--warning);
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .text-center {
+      text-align: center;
+    }
+
+    @media (max-width: 768px) {
+      .dashboard-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+      }
+      
+      .dashboard-card {
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+      }
+      
+      .data-table thead th,
+      .data-table tbody td {
+        padding: 0.75rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="dashboard-container">
+    <header class="dashboard-header">
+      <div class="brand-container">
+        <div class="brand-logo">T</div>
+        <div>
+          <h1 class="brand-title">TROOBA</h1>
+          <p class="page-subtitle">Sales forecast predictions</p>
+        </div>
+      </div>
+      <div class="period-badge">
+        <i class="fas fa-calendar-alt"></i> 2024 Forecast
+      </div>
+    </header>
+    
+    <main>
+      <div class="dashboard-card">
+        <div class="card-header">
+          <h2 class="card-title">Product Sales Forecast</h2>
+          <div class="card-actions">
+            <button class="btn btn-sm btn-outline-secondary">
+              <i class="fas fa-download"></i> Export
+            </button>
+          </div>
+        </div>
+        
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>SKU</th>
+                <th>Product</th>
+                <th>Actual Sales (2024)</th>
+                <th>Predicted Sales (2024)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% if predictions %}
+                {% for item in predictions %}
+                <tr>
+                  <td><code>{{ item.variant_sku }}</code></td>
+                  <td><div class="product-title">{{ item.product_title|default:"—" }}</div></td>
+                  <td>
+                    {% with current_variant_2024_data=actual_2024_sales_lookup|get_item:item.variant_sku %}
+                      {% if current_variant_2024_data %}
+                        <span class="actual-sales-badge">{{ current_variant_2024_data.total_quantity_sold|default:"0" }}</span>
+                      {% else %}
+                        <span class="actual-sales-badge">N/A</span>
+                      {% endif %}
+                    {% endwith %}
+                  </td>
+                  <td>
+                    <div class="prediction-cell">
+                      {{ item.predicted_quantity|default:item.prediction_raw|linebreaksbr }}
+                    </div>
+                  </td>
+                </tr>
+                {% endfor %}
+              {% else %}
+                <tr>
+                  <td colspan="4">
+                    <div class="alert">
+                      <i class="fas fa-exclamation-circle"></i>
+                      <div>No predictions available. Please run the forecast again.</div>
+                    </div>
+                  </td>
+                </tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

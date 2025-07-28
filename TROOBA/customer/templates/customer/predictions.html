@@ -224,13 +224,13 @@
         align-items: flex-start;
         gap: 1rem;
       }
-      
+
       .dashboard-card {
         border-radius: 0;
         border-left: none;
         border-right: none;
       }
-      
+
       .data-table thead th,
       .data-table tbody td {
         padding: 0.75rem;
@@ -252,7 +252,7 @@
         <i class="fas fa-calendar-alt"></i> 2024 Forecast
       </div>
     </header>
-    
+
     <main>
       <div class="dashboard-card">
         <div class="card-header">
@@ -263,21 +263,24 @@
             </button>
           </div>
         </div>
-        
+
         <div class="table-responsive">
           <table class="data-table">
             <thead>
               <tr>
+                <th>Rank</th>
                 <th>SKU</th>
                 <th>Product</th>
                 <th>Actual Sales (2024)</th>
                 <th>Predicted Sales (2024)</th>
+                <th>Action</th>
               </tr>
             </thead>
             <tbody>
               {% if predictions %}
                 {% for item in predictions %}
                 <tr>
+                  <td>{{ forloop.counter }}</td>
                   <td><code>{{ item.variant_sku }}</code></td>
                   <td><div class="product-title">{{ item.product_title|default:"—" }}</div></td>
                   <td>
@@ -291,14 +294,25 @@
                   </td>
                   <td>
                     <div class="prediction-cell">
-                      {{ item.predicted_quantity|default:item.prediction_raw|linebreaksbr }}
+                      {{ item.predicted_quantity|default:item.predicted_sales_text|linebreaksbr }}
                     </div>
+                  </td>
+                  <td>
+                    {% if item.variant_sku %}
+                      <a href="{% url 'compare_sku' item.variant_sku %}" class="btn btn-sm btn-outline-secondary">
+                        <i class="fas fa-chart-line me-1"></i> Compare
+                      </a>
+                    {% else %}
+                      <button class="btn btn-sm btn-outline-secondary" disabled>
+                        <i class="fas fa-ban me-1"></i> N/A
+                      </button>
+                    {% endif %}
                   </td>
                 </tr>
                 {% endfor %}
               {% else %}
                 <tr>
-                  <td colspan="4">
+                  <td colspan="5">
                     <div class="alert">
                       <i class="fas fa-exclamation-circle"></i>
                       <div>No predictions available. Please run the forecast again.</div>

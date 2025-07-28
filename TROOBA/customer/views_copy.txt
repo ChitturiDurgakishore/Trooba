@@ -227,196 +227,105 @@ def top_20_selling_products_till_2024_view(request):
 
 # 2025 Data fetching from 2024 top 20 products
 import json
-import os
-import time
-import requests
 from datetime import datetime
-from collections import defaultdict
-from django.db.models import Sum
 from django.utils.timezone import make_aware
-from django.http import JsonResponse
+from django.db.models import Sum
 from django.shortcuts import render
+from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from dotenv import load_dotenv
-
-from .models import OrderLineItem, ProductVariant, Product, Prompt
+from .models import OrderLineItem, Product, ProductVariant
 
 @csrf_exempt
 def top_20_selling_products_2024_onward_view(request):
-    if request.method != 'POST':
-        return JsonResponse({'error': 'Invalid request method'}, status=405)
+    if request.method == 'POST':
+        products_json = request.POST.get("products_json")
 
-    products_json = request.POST.get("products_json")
+        if not products_json:
+            return JsonResponse({"error": "Missing products_json in POST"}, status=400)
 
-    if not products_json:
-        return JsonResponse({'error': 'Missing products_json in POST'}, status=400)
+        if products_json.startswith("[{") and "'" in products_json and '"' not in products_json:
+            products_json = products_json.replace("'", '"')
 
-    if products_json.startswith("[{") and "'" in products_json and '"' not in products_json:
-        products_json = products_json.replace("'", '"')
+        try:
+            top_products_2024 = json.loads(products_json)
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON format"}, status=400)
 
-    try:
-        top_products_2024 = json.loads(products_json)
-    except json.JSONDecodeError:
-        return JsonResponse({'error': 'Invalid JSON format'}, status=400)
+        variant_skus = [p.get('variant_sku') for p in top_products_2024 if p.get('variant_sku')]
 
-    variant_skus = [p.get('variant_sku') for p in top_products_2024 if p.get('variant_sku')]
+        if not variant_skus:
+            return JsonResponse({"error": "No valid variant SKUs provided"}, status=400)
 
-    if not variant_skus:
-        return JsonResponse({'error': 'No valid variant SKUs provided'}, status=400)
+        sku_order_map = {sku: i for i, sku in enumerate(variant_skus)}
 
-    sku_order_map = {sku: i for i, sku in enumerate(variant_skus)}
+        matching_variants = ProductVariant.objects.filter(sku__in=variant_skus)
+        variant_id_map = {v.sku: v.id for v in matching_variants}
+        variant_ids = list(variant_id_map.values())
 
-    matching_variants = ProductVariant.objects.select_related('product').filter(sku__in=variant_skus)
-    variant_lookup = {v.sku: v for v in matching_variants}
-    variant_ids = [v.id for v in matching_variants]
+        if not variant_ids:
+            return JsonResponse({"error": "No matching variants found for given SKUs"}, status=400)
 
-    if not variant_ids:
-        return JsonResponse({'error': 'No matching variants found for given SKUs'}, status=400)
+        # Timeline: Jan 1, 2024 to Dec 31, 2024
+        start_date = make_aware(datetime(2024, 1, 1))
+        end_date = make_aware(datetime(2025, 1, 1))
 
-    # Actual 2024 sales
-    start_date = make_aware(datetime(2024, 1, 1))
-    end_date = make_aware(datetime(2025, 1, 1))
-    items_2024_only = (
-        OrderLineItem.objects
-        .filter(
-            order__order_date__gte=start_date,
-            order__order_date__lt=end_date,
-            variant_id__in=variant_ids
-        )
-        .values('product_id', 'variant_id')
-        .annotate(total_quantity_sold=Sum('quantity'))
-    )
-
-    variant_sales_map = {item['variant_id']: item['total_quantity_sold'] for item in items_2024_only}
-    products_lookup = Product.objects.in_bulk([item['product_id'] for item in items_2024_only])
-    variants_lookup = ProductVariant.objects.in_bulk(variant_ids)
-
-    actual_2024_sales_list = []
-    for sku in variant_skus:
-        variant = variant_lookup.get(sku)
-        if not variant:
-            continue
-        quantity = variant_sales_map.get(variant.id, 0)
-        actual_2024_sales_list.append({"variant_sku": sku, "total_quantity_sold": quantity})
-
-    # Historical data before 2024
-    cutoff_date = make_aware(datetime(2024, 1, 1))
-    sales_qs = (
-        OrderLineItem.objects
-        .filter(variant_id__in=variant_ids, order__order_date__lt=cutoff_date)
-        .select_related('order', 'variant', 'product')
-    )
-
-    monthly_historical_sales_by_sku = defaultdict(lambda: defaultdict(int))
-    for item in sales_qs:
-        sku = item.variant.sku if item.variant else None
-        if not sku:
-            continue
-        month_str = item.order.order_date.strftime('%Y-%m')
-        monthly_historical_sales_by_sku[sku][month_str] += item.quantity
-
-    def monthly_sales_to_list(monthly_dict):
-        months_sorted = sorted(monthly_dict.keys())
-        return [{"month": m, "quantity": monthly_dict[m]} for m in months_sorted]
-
-    load_dotenv()
-    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-    if not GEMINI_API_KEY:
-        return JsonResponse({'error': 'Missing GEMINI_API_KEY in .env'}, status=500)
-
-    GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
-
-    try:
-        template_row = Prompt.objects.get(type="MainPrompt")
-        static_prompt = template_row.prompt.strip()
-    except Prompt.DoesNotExist:
-        return JsonResponse({'error': "Prompt with type='MainPrompt' not found in DB"}, status=500)
-
-    headers = {
-        "Content-Type": "application/json",
-        "X-goog-api-key": GEMINI_API_KEY
-    }
-
-    def call_gemini_with_retry(prompt):
-        payload = {"contents": [{"parts": [{"text": prompt}]}]}
-        max_retries = 5
-        delay = 3
-        for attempt in range(max_retries):
-            try:
-                response = requests.post(GEMINI_URL, headers=headers, data=json.dumps(payload))
-                if response.status_code == 429:
-                    time.sleep(delay)
-                    delay *= 2
-                    continue
-                response.raise_for_status()
-                return response.json()
-            except requests.exceptions.RequestException:
-                time.sleep(delay)
-                delay *= 2
-        return {"error": "Max retries exceeded or persistent API error"}
-
-    predictions = []
-    original_sales_history = {}
-    actual_2024_sales_lookup = {item['variant_sku']: item for item in actual_2024_sales_list}
-
-    for sku in variant_skus:
-        variant = variant_lookup.get(sku)
-        product = variant.product if variant else None
-
-        monthly_history = monthly_sales_to_list(monthly_historical_sales_by_sku.get(sku, {}))
-        original_sales_history[sku] = monthly_history
-        history_json = json.dumps(monthly_history, indent=2)
-
-        prompt = (
-            f"{static_prompt}\n\n"
-            f"### PRODUCT DETAILS:\n"
-            f"- Product Title: \"{product.title if product else 'Unknown Product'}\"\n"
-            f"- SKU: {sku}\n"
-            f"- Product Type: {product.product_type if product else 'Unknown'}\n"
-            f"- Vendor: {product.vendor if product else 'Unknown'}\n\n"
-            f"### HISTORICAL MONTHLY SALES DATA (Before 2024):\n"
-            f"{history_json}\n\n"
-            f"Based on the above historical data, predict the *total quantity sold* for the year **2024** for SKU: {sku}. "
-            f"Provide only the predicted total quantity as a plain number, without any additional text or formatting."
+        items_2024_only = (
+            OrderLineItem.objects
+            .filter(
+                order__order_date__gte=start_date,
+                order__order_date__lt=end_date,
+                variant_id__in=variant_ids
+            )
+            .values('product_id', 'variant_id')
+            .annotate(total_quantity_sold=Sum('quantity'))
         )
 
-        response_data = call_gemini_with_retry(prompt)
+        variant_sales_map = {item['variant_id']: item['total_quantity_sold'] for item in items_2024_only}
+        products_lookup = Product.objects.in_bulk([item['product_id'] for item in items_2024_only])
+        variants_lookup = ProductVariant.objects.in_bulk(variant_ids)
 
-        prediction_raw = "[No Response]"
-        predicted_quantity = None
+        results_unsorted = []
+        for sku in variant_skus:
+            vid = variant_id_map.get(sku)
+            if vid is None:
+                continue
 
-        if "candidates" in response_data and response_data['candidates']:
-            try:
-                prediction_raw = response_data['candidates'][0]['content']['parts'][0]['text'].strip()
-            except (ValueError, KeyError, IndexError):
-                prediction_raw = f"[Failed to parse prediction. Raw: {response_data}]"
-        elif "error" in response_data:
-            prediction_raw = f"[Gemini API Error] {response_data['error']}"
+            matching_item = next((item for item in items_2024_only if item['variant_id'] == vid), None)
 
-        if 'Reason:' in prediction_raw:
-            parts = prediction_raw.split('Reason:', 1)
-            predicted_sales_text = parts[0].strip()
-            reason_text = parts[1].strip()
-        else:
-            predicted_sales_text = prediction_raw.strip()
-            reason_text = ""
+            if matching_item:
+                product = products_lookup.get(matching_item['product_id'])
+                variant = variants_lookup.get(vid)
+                total_qty = variant_sales_map.get(vid, 0)
 
-        predictions.append({
-            "variant_sku": sku,
-            "product_title": product.title if product else None,
-            "prediction_raw": prediction_raw,
-            "predicted_quantity": predicted_quantity,
-            "predicted_sales_text": predicted_sales_text,
-            "reason_text": reason_text,
-        })
+                results_unsorted.append({
+                    "product_id": product.id if product else None,
+                    "product_shopify_id": product.shopify_id if product else None,
+                    "product_title": product.title if product else None,
+                    "variant_title": variant.title if variant else None,
+                    "variant_sku": variant.sku if variant else None,
+                    "price": variant.price if variant else None,
+                    "vendor": product.vendor if product else None,
+                    "product_type": product.product_type if product else None,
+                    "total_quantity_sold": total_qty,
+                })
+            else:
+                variant = variants_lookup.get(vid)
+                results_unsorted.append({
+                    "product_id": None,
+                    "product_shopify_id": None,
+                    "product_title": None,
+                    "variant_title": variant.title if variant else None,
+                    "variant_sku": variant.sku if variant else None,
+                    "price": variant.price if variant else None,
+                    "vendor": None,
+                    "product_type": None,
+                    "total_quantity_sold": 0,
+                })
 
-        time.sleep(1.2)
+        return render(request, 'customer/Top202025.html', {'products': results_unsorted})
 
-    return render(request, 'customer/predictions.html', {
-        "predictions": predictions,
-        "original_sales_history": original_sales_history,
-        "actual_2024_sales_lookup": actual_2024_sales_lookup
-    })
+    return JsonResponse({"error": "Invalid method"}, status=405)
+
 
 # -------------------------------
 
@@ -633,3 +542,175 @@ def sku_sales_history(request, sku):
 #2023 data shown , 2024 data shown , comparison shown for every SKU varient . 
  
 # Change ony this function for any changes 
+
+
+import json
+import os
+import time
+import requests
+from datetime import datetime
+from collections import defaultdict
+from django.http import JsonResponse
+from django.utils.timezone import make_aware
+from django.views.decorators.csrf import csrf_exempt
+from dotenv import load_dotenv
+from django.shortcuts import render
+
+from .models import OrderLineItem, ProductVariant, Product, Prompt
+
+@csrf_exempt
+def fetch_historical_sales_till_2024(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+    variant_skus_json = request.POST.get('variant_skus_json')
+    variant_data_json = request.POST.get('variant_data_json')
+
+    if not variant_skus_json or not variant_data_json:
+        return JsonResponse({'error': 'Missing POST data'}, status=400)
+
+    try:
+        variant_skus = json.loads(variant_skus_json)
+        actual_2024_sales_list = json.loads(variant_data_json)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON format'}, status=400)
+
+    if not variant_skus:
+        return JsonResponse({'error': 'No variant SKUs provided'}, status=400)
+
+    load_dotenv()
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+    if not GEMINI_API_KEY:
+        return JsonResponse({'error': 'Missing GEMINI_API_KEY in .env'}, status=500)
+
+    GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
+
+    variants = ProductVariant.objects.select_related('product').filter(sku__in=variant_skus)
+    variant_lookup = {v.sku: v for v in variants}
+    variant_ids = [v.id for v in variants]
+
+    if not variant_ids:
+        return JsonResponse({'error': 'No matching variants found in DB'}, status=400)
+
+    cutoff_date = make_aware(datetime(2024, 1, 1))
+    sales_qs = (
+        OrderLineItem.objects
+        .filter(variant_id__in=variant_ids, order__order_date__lt=cutoff_date)
+        .select_related('order', 'variant', 'product')
+    )
+
+    monthly_historical_sales_by_sku = defaultdict(lambda: defaultdict(int))
+    for item in sales_qs:
+        sku = item.variant.sku if item.variant else None
+        if not sku:
+            continue
+        month_str = item.order.order_date.strftime('%Y-%m')
+        monthly_historical_sales_by_sku[sku][month_str] += item.quantity
+
+    def monthly_sales_to_list(monthly_dict):
+        months_sorted = sorted(monthly_dict.keys())
+        return [{"month": m, "quantity": monthly_dict[m]} for m in months_sorted]
+
+    try:
+        template_row = Prompt.objects.get(type="MainPrompt")
+        static_prompt = template_row.prompt.strip()
+    except Prompt.DoesNotExist:
+        return JsonResponse({'error': "Prompt with type='MainPrompt' not found in DB"}, status=500)
+
+    headers = {
+        "Content-Type": "application/json",
+        "X-goog-api-key": GEMINI_API_KEY
+    }
+
+    def call_gemini_with_retry(prompt):
+        payload = {
+            "contents": [
+                {
+                    "parts": [{"text": prompt}]
+                }
+            ]
+        }
+        max_retries = 5
+        delay = 3
+        for attempt in range(max_retries):
+            try:
+                response = requests.post(GEMINI_URL, headers=headers, data=json.dumps(payload))
+                if response.status_code == 429:
+                    print(f"🔁 Rate limited. Retrying in {delay} seconds... (Attempt {attempt+1}/{max_retries})")
+                    time.sleep(delay)
+                    delay *= 2
+                    continue
+                response.raise_for_status()
+                return response.json()
+            except requests.exceptions.RequestException as e:
+                print(f"⚠️ Gemini API request error on attempt {attempt+1}: {e}")
+                time.sleep(delay)
+                delay *= 2
+        return {"error": "Max retries exceeded or persistent API error"}
+
+    predictions = []
+    original_sales_history = {}
+    actual_2024_sales_lookup = {item['variant_sku']: item for item in actual_2024_sales_list}
+
+    for sku in variant_skus:
+        variant = variant_lookup.get(sku)
+        product = variant.product if variant else None
+
+        monthly_history = monthly_sales_to_list(monthly_historical_sales_by_sku.get(sku, {}))
+        original_sales_history[sku] = monthly_history
+        history_json = json.dumps(monthly_history, indent=2)
+
+        prompt = (
+            f"{static_prompt}\n\n"
+            f"### PRODUCT DETAILS:\n"
+            f"- Product Title: \"{product.title if product else 'Unknown Product'}\"\n"
+            f"- SKU: {sku}\n"
+            f"- Product Type: {product.product_type if product else 'Unknown'}\n"
+            f"- Vendor: {product.vendor if product else 'Unknown'}\n\n"
+            f"### HISTORICAL MONTHLY SALES DATA (Before 2024):\n"
+            f"{history_json}\n\n"
+            f"Based on the above historical data, predict the *total quantity sold* for the year **2024** for SKU: {sku}. "
+            f"Provide only the predicted total quantity as a plain number, without any additional text or formatting."
+        )
+
+        response_data = call_gemini_with_retry(prompt)
+
+        prediction_raw = "[No Response]"
+        predicted_quantity = None
+
+        if "candidates" in response_data and response_data['candidates']:
+            try:
+                prediction_raw = response_data['candidates'][0]['content']['parts'][0]['text'].strip()
+                # predicted_quantity = int(float(prediction_raw))
+            except (ValueError, KeyError, IndexError) as e:
+                prediction_raw = f"[Failed to parse prediction: {e}. Raw: {response_data}]"
+        elif "error" in response_data:
+            prediction_raw = f"[Gemini API Error] {response_data['error']}"
+        else:
+            prediction_raw = "[Unknown Gemini error or empty response]"
+
+        # Split the prediction_raw into predicted sales and reason
+        if 'Reason:' in prediction_raw:
+            parts = prediction_raw.split('Reason:', 1)
+            predicted_sales_text = parts[0].strip()
+            reason_text = parts[1].strip()
+        else:
+            predicted_sales_text = prediction_raw.strip()
+            reason_text = ""
+
+        predictions.append({
+            "variant_sku": sku,
+            "product_title": product.title if product else None,
+            "prediction_raw": prediction_raw,
+            "predicted_quantity": predicted_quantity,
+            "predicted_sales_text": predicted_sales_text,
+            "reason_text": reason_text,
+        })
+
+        time.sleep(1.2)
+
+    return render(request, 'customer/predictions.html', {
+        "predictions": predictions,
+        "original_sales_history": original_sales_history,
+        "actual_2024_sales_lookup": actual_2024_sales_lookup
+    })

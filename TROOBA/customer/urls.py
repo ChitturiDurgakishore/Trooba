@@ -1,6 +1,6 @@
 from django.urls import path
 from .views import fetch_and_store_all ,  top_20_selling_products_till_2024_view ,top_20_selling_products_2024_onward_view
-from .views import compare_sku_prediction_view,sku_sales_history
+from .views import compare_sku_prediction_view,sku_sales_history 
 
 
 urlpatterns = [
@@ -10,4 +10,5 @@ urlpatterns = [
     path("sku-history/<str:sku>/", sku_sales_history, name="sku_sales_history"),
     path('compare/<str:sku>/', compare_sku_prediction_view, name='compare_sku'),
     # path('predict-2024-sales/', fetch_historical_sales_till_2024, name='predict_2024_sales'),
-]
+
+ ]

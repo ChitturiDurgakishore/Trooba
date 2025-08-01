@@ -103,3 +103,172 @@ class SalesPrediction(models.Model):
 class Prompt(models.Model):
     prompt=models.TextField(max_length=100000)
     type=models.TextField(max_length=100,default="Header")
+
+# new models -- for promotions data -- 30/07/25
+
+from django.db import models
+
+class CustomerPromotionJune(models.Model):
+    title = models.CharField(max_length=255)
+    itemid = models.CharField(max_length=255)
+    productid = models.BigIntegerField()
+    varientid = models.BigIntegerField()
+    price = models.CharField(max_length=50, null=True, blank=True)
+
+    clicks = models.IntegerField(default=0)
+    cost = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    conv_value = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    conv_value_per_cost = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    impr = models.IntegerField(default=0)
+    ctr = models.CharField(max_length=20, null=True, blank=True)
+    avg_cpc = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    conversions = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    cost_conv = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    conv_value_click = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    value_conv = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    conv_rate = models.CharField(max_length=20, null=True, blank=True)
+
+    all_conv = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    all_conv_value_click = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    all_conv_value_cost = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    cost_all_conv = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    value_all_conv = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    all_conv_rate = models.CharField(max_length=20, null=True, blank=True)
+    all_conv_value = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+
+    units_sold = models.IntegerField(default=0)
+    revenue = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    avg_order_value = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    orders = models.IntegerField(default=0)
+    avg_basket_size = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    gross_profit = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    cost_of_goods_sold = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+
+    lead_units_sold = models.IntegerField(default=0)
+    cross_sell_units_sold = models.IntegerField(default=0)
+    lead_revenue = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    cross_sell_revenue = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    cross_device_conv = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    cross_device_conv_value = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+
+    category_1st_level = models.CharField(max_length=255, null=True, blank=True)
+    category_5th_level = models.CharField(max_length=255, null=True, blank=True)
+    category_2nd_level = models.CharField(max_length=255, null=True, blank=True)
+    category_3rd_level = models.CharField(max_length=255, null=True, blank=True)
+    category_4th_level = models.CharField(max_length=255, null=True, blank=True)
+    product_type_1st_level = models.CharField(max_length=255, null=True, blank=True)
+
+    class Meta:
+        db_table = "customer_promotion_june"
+
+    def __str__(self):
+        return f"{self.title} ({self.itemid})"
+    
+    from django.db import models
+
+class CustomerPromotion_May(models.Model):
+    title = models.CharField(max_length=255)
+    item_id = models.CharField(max_length=255)
+    product_id = models.BigIntegerField()
+    variant_id = models.BigIntegerField()
+    price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    clicks = models.IntegerField(default=0)
+    cost = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    conv_value = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    conv_value_per_cost = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    impressions = models.IntegerField(default=0)
+    ctr = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    avg_cpc = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    conversions = models.IntegerField(default=0)
+    cost_per_conv = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    conv_value_per_click = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    value_per_conv = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    conv_rate = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    all_conv = models.IntegerField(default=0)
+    all_conv_value_per_click = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    all_conv_value_per_cost = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    cost_per_all_conv = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    value_per_all_conv = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    all_conv_rate = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    all_conv_value = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    units_sold = models.IntegerField(default=0)
+    revenue = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    avg_order_value = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    orders = models.IntegerField(default=0)
+    avg_basket_size = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    gross_profit = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    cost_of_goods_sold = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    lead_units_sold = models.IntegerField(default=0)
+    cross_sell_units_sold = models.IntegerField(default=0)
+    lead_revenue = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    cross_sell_revenue = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    cross_device_conv = models.IntegerField(default=0)
+    cross_device_conv_value = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    category_1st_level = models.CharField(max_length=255, null=True, blank=True)
+    category_5th_level = models.CharField(max_length=255, null=True, blank=True)
+    category_2nd_level = models.CharField(max_length=255, null=True, blank=True)
+    category_3rd_level = models.CharField(max_length=255, null=True, blank=True)
+    category_4th_level = models.CharField(max_length=255, null=True, blank=True)
+    product_type_1st_level = models.CharField(max_length=255, null=True, blank=True)
+
+    class Meta:
+        db_table = 'customer_promotion_may'
+
+    def __str__(self):
+        return f"{self.title} - {self.item_id}"
+    
+
+    from django.db import models
+
+class CustomerPromotion_April(models.Model):
+    title = models.CharField(max_length=255)
+    item_id = models.CharField(max_length=255)
+    product_id = models.BigIntegerField()
+    variant_id = models.BigIntegerField()
+    price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    clicks = models.IntegerField(default=0)
+    cost = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    conv_value = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    conv_value_per_cost = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    impressions = models.IntegerField(default=0)
+    ctr = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    avg_cpc = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    conversions = models.IntegerField(default=0)
+    cost_per_conv = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    conv_value_per_click = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    value_per_conv = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    conv_rate = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    all_conv = models.IntegerField(default=0)
+    all_conv_value_per_click = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    all_conv_value_per_cost = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    cost_per_all_conv = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    value_per_all_conv = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    all_conv_rate = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    all_conv_value = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    units_sold = models.IntegerField(default=0)
+    revenue = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    avg_order_value = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    orders = models.IntegerField(default=0)
+    avg_basket_size = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    gross_profit = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    cost_of_goods_sold = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    lead_units_sold = models.IntegerField(default=0)
+    cross_sell_units_sold = models.IntegerField(default=0)
+    lead_revenue = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    cross_sell_revenue = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    cross_device_conv = models.IntegerField(default=0)
+    cross_device_conv_value = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    category_1st_level = models.CharField(max_length=255, null=True, blank=True)
+    category_5th_level = models.CharField(max_length=255, null=True, blank=True)
+    category_2nd_level = models.CharField(max_length=255, null=True, blank=True)
+    category_3rd_level = models.CharField(max_length=255, null=True, blank=True)
+    category_4th_level = models.CharField(max_length=255, null=True, blank=True)
+    product_type_1st_level = models.CharField(max_length=255, null=True, blank=True)
+
+    class Meta:
+        db_table = 'customer_promotion_april'
+
+    def __str__(self):
+        return f"{self.title} - {self.item_id}"
+
+

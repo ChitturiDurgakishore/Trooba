@@ -1,12 +1,13 @@
-{% load custom_filters %}
+{% load static custom_filters %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <title>TROOBA | Sales Forecast Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
       --primary: #4361ee;
@@ -17,229 +18,233 @@
       --gray: #6b7280;
       --light-gray: #e5e7eb;
       --success: #10b981;
-      --warning: #f59e0b;
-      --danger: #ef4444;
-      --border-radius: 8px;
-      --box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.1);
+      --info: #3b82f6;
     }
-
+    
     body {
-      font-family: 'Inter', sans-serif;
       background-color: #f8fafc;
+      font-family: 'Inter', sans-serif;
       color: var(--dark);
       line-height: 1.6;
-      margin: 0;
-      padding: 0;
     }
-
+    
     .dashboard-container {
       max-width: 1400px;
       margin: 2rem auto;
       padding: 0 1.5rem;
     }
-
+    
+    /* Header Styles */
     .dashboard-header {
       display: flex;
       justify-content: space-between;
-      align-items: center;
+      align-items: flex-end;
       margin-bottom: 2rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--light-gray);
     }
-
+    
     .brand-container {
       display: flex;
       align-items: center;
       gap: 1rem;
     }
-
+    
     .brand-logo {
       width: 48px;
       height: 48px;
       background-color: var(--primary);
-      color: white;
-      border-radius: var(--border-radius);
+      border-radius: 8px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 1.5rem;
+      color: white;
       font-weight: 700;
+      font-size: 1.5rem;
     }
-
+    
     .brand-title {
       font-size: 1.8rem;
       font-weight: 700;
       color: var(--dark);
       margin: 0;
     }
-
+    
     .page-subtitle {
       font-size: 0.95rem;
       color: var(--gray);
       font-weight: 500;
       margin: 0;
     }
-
+    
     .period-badge {
       background-color: var(--primary);
       color: white;
       padding: 0.5rem 1rem;
-      border-radius: var(--border-radius);
+      border-radius: 6px;
       font-size: 0.85rem;
       font-weight: 600;
-      display: flex;
+      display: inline-flex;
       align-items: center;
       gap: 0.5rem;
     }
-
+    
+    /* Card Styles */
     .dashboard-card {
       background-color: white;
-      border-radius: var(--border-radius);
-      box-shadow: var(--box-shadow);
+      border-radius: 12px;
+      padding: 2rem;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.1);
+      margin-bottom: 2rem;
       border: 1px solid var(--light-gray);
-      overflow: hidden;
     }
-
+    
     .card-header {
-      padding: 1.25rem 1.5rem;
-      border-bottom: 1px solid var(--light-gray);
       display: flex;
       justify-content: space-between;
       align-items: center;
+      margin-bottom: 1.5rem;
     }
-
+    
     .card-title {
       font-size: 1.25rem;
       font-weight: 600;
       color: var(--dark);
       margin: 0;
     }
-
-    .card-actions {
-      display: flex;
-      gap: 0.75rem;
-    }
-
-    .btn {
-      padding: 0.5rem 1rem;
-      border-radius: var(--border-radius);
-      font-size: 0.85rem;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      border: 1px solid transparent;
-    }
-
-    .btn-sm {
-      padding: 0.375rem 0.75rem;
-      font-size: 0.8rem;
-    }
-
-    .btn-outline-secondary {
-      border: 1px solid var(--light-gray);
-      color: var(--gray);
-      background-color: white;
-    }
-
-    .btn-outline-secondary:hover {
-      background-color: var(--light-gray);
-    }
-
-    .table-responsive {
-      overflow-x: auto;
-    }
-
+    
+    /* Table Styles */
     .data-table {
       width: 100%;
-      border-collapse: collapse;
+      border-collapse: separate;
+      border-spacing: 0;
     }
-
+    
     .data-table thead th {
       background-color: var(--primary);
       color: white;
-      padding: 0.75rem 1.5rem;
+      padding: 0.75rem 1rem;
       font-weight: 500;
-      text-align: left;
-      font-size: 0.75rem;
       text-transform: uppercase;
+      font-size: 0.75rem;
       letter-spacing: 0.5px;
+      border: none;
     }
-
+    
+    .data-table thead th:first-child {
+      border-top-left-radius: 8px;
+      border-bottom-left-radius: 8px;
+    }
+    
+    .data-table thead th:last-child {
+      border-top-right-radius: 8px;
+      border-bottom-right-radius: 8px;
+    }
+    
+    .data-table tbody tr {
+      transition: all 0.2s ease;
+    }
+    
+    .data-table tbody tr:hover {
+      background-color: rgba(67, 97, 238, 0.05);
+    }
+    
     .data-table tbody td {
-      padding: 1rem 1.5rem;
+      padding: 1rem;
       border-bottom: 1px solid var(--light-gray);
       vertical-align: middle;
-      font-size: 0.9rem;
     }
-
+    
     .data-table tbody tr:last-child td {
       border-bottom: none;
     }
-
-    .data-table tbody tr:hover {
-      background-color: rgba(67, 97, 238, 0.03);
-    }
-
-    .product-title {
-      font-weight: 500;
-      color: var(--dark);
-    }
-
-    .actual-sales-badge {
-      background-color: var(--light-gray);
-      color: var(--dark);
-      padding: 0.25rem 0.5rem;
+    
+    /* Badge Styles */
+    .badge {
+      padding: 0.3rem 0.6rem;
       border-radius: 4px;
-      font-weight: 600;
-      font-size: 0.85rem;
+      font-size: 0.8rem;
       display: inline-block;
+      font-weight: 500;
     }
-
-    .prediction-cell {
-      font-weight: 600;
-      color: var(--primary);
+    
+    .badge-actual {
+      background: #f3f4f6;
+      color: var(--dark);
     }
-
-    .alert {
+    
+    .badge-predicted {
+      background: #e0f2fe;
+      color: #0369a1;
+    }
+    
+    /* JSON Data Display */
+    .sales-data {
+      background-color: var(--light);
+      padding: 0.75rem;
+      border-radius: 6px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85rem;
+      line-height: 1.5;
+    }
+    
+    /* Reason Toggle */
+    .reason-row {
+      background-color: var(--light);
+      display: none;
+    }
+    
+    .reason-cell {
       padding: 1rem;
-      border-radius: var(--border-radius);
-      margin: 1rem;
-      font-size: 0.9rem;
-      background-color: rgba(245, 158, 11, 0.1);
-      color: var(--warning);
-      border-left: 4px solid var(--warning);
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
+      border-bottom: 1px solid var(--light-gray);
+      font-size: 0.85rem;
+      color: var(--gray);
+      line-height: 1.6;
     }
-
-    .text-center {
-      text-align: center;
+    
+    .btn-reason {
+      cursor: pointer;
+      font-size: 0.85rem;
+      padding: 0.5rem 0.75rem;
+      border-radius: 6px;
+      border: 1px solid var(--primary);
+      background-color: white;
+      color: var(--primary);
+      transition: all 0.2s ease;
+      font-weight: 500;
     }
-
+    
+    .btn-reason:hover {
+      background-color: var(--primary);
+      color: white;
+    }
+    
+    /* Responsive */
     @media (max-width: 768px) {
       .dashboard-header {
         flex-direction: column;
         align-items: flex-start;
         gap: 1rem;
       }
-
-      .dashboard-card {
-        border-radius: 0;
-        border-left: none;
-        border-right: none;
+      
+      .dashboard-container {
+        padding: 0 1rem;
       }
-
-      .data-table thead th,
-      .data-table tbody td {
-        padding: 0.75rem;
+      
+      .dashboard-card {
+        padding: 1.5rem 1rem;
+      }
+      
+      .data-table {
+        display: block;
+        overflow-x: auto;
       }
     }
   </style>
 </head>
 <body>
   <div class="dashboard-container">
+    <!-- Dashboard Header -->
     <header class="dashboard-header">
       <div class="brand-container">
         <div class="brand-logo">T</div>
@@ -249,21 +254,22 @@
         </div>
       </div>
       <div class="period-badge">
-        <i class="fas fa-calendar-alt"></i> 2024 Forecast
+        <i class="fas fa-calendar-alt"></i> July 2025 Forecast
       </div>
     </header>
-
+    
+    <!-- Main Content -->
     <main>
       <div class="dashboard-card">
         <div class="card-header">
-          <h2 class="card-title">Product Sales Forecast</h2>
+          <h2 class="card-title">Top Product Sales Forecast</h2>
           <div class="card-actions">
             <button class="btn btn-sm btn-outline-secondary">
-              <i class="fas fa-download"></i> Export
+              <i class="fas fa-download me-1"></i> Export
             </button>
           </div>
         </div>
-
+        
         <div class="table-responsive">
           <table class="data-table">
             <thead>
@@ -271,9 +277,10 @@
                 <th>Rank</th>
                 <th>SKU</th>
                 <th>Product</th>
-                <th>Actual Sales (2024)</th>
-                <th>Predicted Sales (2024)</th>
-                <th>Action</th>
+                <th>Past Sales (Apr–Jun)</th>
+                <th>Predicted July</th>
+                <th>Actual July</th>
+                <th>Analysis</th>
               </tr>
             </thead>
             <tbody>
@@ -281,42 +288,39 @@
                 {% for item in predictions %}
                 <tr>
                   <td>{{ forloop.counter }}</td>
-                  <td><code>{{ item.variant_sku }}</code></td>
-                  <td><div class="product-title">{{ item.product_title|default:"—" }}</div></td>
+                  <td><code>{{ item.SKU }}</code></td>
                   <td>
-                    {% with current_variant_2024_data=actual_2024_sales_lookup|get_item:item.variant_sku %}
-                      {% if current_variant_2024_data %}
-                        <span class="actual-sales-badge">{{ current_variant_2024_data.total_quantity_sold|default:"0" }}</span>
-                      {% else %}
-                        <span class="actual-sales-badge">N/A</span>
-                      {% endif %}
-                    {% endwith %}
+                    <div class="product-title">{{ item.Product }}</div>
                   </td>
                   <td>
-                    <div class="prediction-cell">
-                      {{ item.predicted_quantity|default:item.predicted_sales_text|linebreaksbr }}
+                    <div class="sales-data">
+                      <div>2025-04: {{ item|dict_key:"Past Sales"|dict_key:"2025-04"|default:"0" }}</div>
+                      <div>2025-05: {{ item|dict_key:"Past Sales"|dict_key:"2025-05"|default:"0" }}</div>
+                      <div>2025-06: {{ item|dict_key:"Past Sales"|dict_key:"2025-06"|default:"0" }}</div>
                     </div>
                   </td>
                   <td>
-                    {% if item.variant_sku %}
-                      <a href="{% url 'compare_sku' item.variant_sku %}" class="btn btn-sm btn-outline-secondary">
-                        <i class="fas fa-chart-line me-1"></i> Compare
-                      </a>
-                    {% else %}
-                      <button class="btn btn-sm btn-outline-secondary" disabled>
-                        <i class="fas fa-ban me-1"></i> N/A
-                      </button>
-                    {% endif %}
+                    <span class="badge badge-predicted">{{ item|dict_key:"Predicted July Sales" }}</span>
+                  </td>
+                  <td>
+                    <span class="badge badge-actual">{{ item|dict_key:"Actual July Sales" }}</span>
+                  </td>
+                  <td>
+                    <button class="btn-reason" onclick="toggleReason('reason-{{ forloop.counter }}')">
+                      <i class="fas fa-comment-alt me-1"></i> Details
+                    </button>
+                  </td>
+                </tr>
+                <tr id="reason-{{ forloop.counter }}" class="reason-row">
+                  <td colspan="7" class="reason-cell">
+                    <strong>Analysis:</strong> {{ item|dict_key:"Reason"|linebreaksbr }}
                   </td>
                 </tr>
                 {% endfor %}
               {% else %}
                 <tr>
-                  <td colspan="5">
-                    <div class="alert">
-                      <i class="fas fa-exclamation-circle"></i>
-                      <div>No predictions available. Please run the forecast again.</div>
-                    </div>
+                  <td colspan="7" style="text-align: center; padding: 2rem; color: var(--gray);">
+                    <i class="fas fa-info-circle me-2"></i> No predictions available. Please run the forecast.
                   </td>
                 </tr>
               {% endif %}
@@ -326,5 +330,37 @@
       </div>
     </main>
   </div>
+
+  <script>
+    function toggleReason(id) {
+      const row = document.getElementById(id);
+      if (row.style.display === "table-row") {
+        row.style.display = "none";
+      } else {
+        row.style.display = "table-row";
+      }
+    }
+
+    // Add subtle animation to table rows
+    document.querySelectorAll('.data-table tbody tr').forEach((row, index) => {
+      if (!row.classList.contains('reason-row')) {
+        row.style.opacity = '0';
+        row.style.transform = 'translateY(10px)';
+        row.style.animation = `fadeInUp 0.3s ease forwards ${index * 0.05}s`;
+      }
+    });
+    
+    // Add CSS animation
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes fadeInUp {
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+    `;
+    document.head.appendChild(style);
+  </script>
 </body>
 </html>

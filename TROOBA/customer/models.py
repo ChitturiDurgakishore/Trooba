@@ -69,7 +69,8 @@ class ProductVariant(models.Model):
     title = models.CharField(max_length=255)
     sku = models.CharField(max_length=100, null=True, blank=True)
     price = models.FloatField()
-
+    created_at = models.DateTimeField(blank=True,null=True)  # set on create
+    updated_at = models.DateTimeField(null=True,blank=True) 
     def __str__(self):
         return f"{self.product.title} - {self.title}"
 
@@ -110,9 +111,9 @@ from django.db import models
 
 class CustomerPromotionJune(models.Model):
     title = models.CharField(max_length=255)
-    itemid = models.CharField(max_length=255)
-    productid = models.BigIntegerField()
-    varientid = models.BigIntegerField()
+    item_id = models.CharField(max_length=255)
+    product_id = models.BigIntegerField()
+    variant_id = models.BigIntegerField()
     price = models.CharField(max_length=50, null=True, blank=True)
 
     clicks = models.IntegerField(default=0)

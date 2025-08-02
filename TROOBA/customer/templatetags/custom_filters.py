@@ -1,13 +1,27 @@
+# yourapp/templatetags/custom_filters.py
+
 from django import template
+import json
 
 register = template.Library()
 
 @register.filter
-def get_item(dictionary, key):
+def dict_key(d, key):
     """
-    Allows dictionary lookup by key in Django templates.
-    Usage: {{ my_dict|get_item:my_key }}
+    Safely get a dictionary key in templates.
+    Usage: {{ my_dict|dict_key:"key_name" }}
     """
-    return dictionary.get(key)
+    if isinstance(d, dict):
+        return d.get(key)
+    return None
 
-
+@register.filter
+def pretty_json(value):
+    """
+    Pretty-print a dict or JSON object.
+    Usage: {{ my_object|pretty_json }}
+    """
+    try:
+        return json.dumps(value, indent=2)
+    except Exception:
+        return value

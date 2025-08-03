@@ -26,28 +26,34 @@
       font-family: 'Inter', sans-serif;
       color: var(--dark);
       line-height: 1.6;
+      overflow-x: hidden;
     }
     
     .dashboard-container {
       max-width: 1400px;
       margin: 2rem auto;
       padding: 0 1.5rem;
+      width: 100%;
+      box-sizing: border-box;
     }
     
     /* Header Styles */
     .dashboard-header {
       display: flex;
+      flex-wrap: wrap;
       justify-content: space-between;
       align-items: flex-end;
       margin-bottom: 2rem;
       padding-bottom: 1rem;
       border-bottom: 1px solid var(--light-gray);
+      gap: 1rem;
     }
     
     .brand-container {
       display: flex;
       align-items: center;
       gap: 1rem;
+      flex-wrap: wrap;
     }
     
     .brand-logo {
@@ -61,17 +67,18 @@
       color: white;
       font-weight: 700;
       font-size: 1.5rem;
+      flex-shrink: 0;
     }
     
     .brand-title {
-      font-size: 1.8rem;
+      font-size: clamp(1.5rem, 4vw, 1.8rem);
       font-weight: 700;
       color: var(--dark);
       margin: 0;
     }
     
     .page-subtitle {
-      font-size: 0.95rem;
+      font-size: clamp(0.85rem, 2vw, 0.95rem);
       color: var(--gray);
       font-weight: 500;
       margin: 0;
@@ -87,37 +94,48 @@
       display: inline-flex;
       align-items: center;
       gap: 0.5rem;
+      flex-shrink: 0;
     }
     
     /* Card Styles */
     .dashboard-card {
       background-color: white;
       border-radius: 12px;
-      padding: 2rem;
+      padding: 1.5rem;
       box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.1);
       margin-bottom: 2rem;
       border: 1px solid var(--light-gray);
+      overflow: hidden;
     }
     
     .card-header {
       display: flex;
+      flex-wrap: wrap;
       justify-content: space-between;
       align-items: center;
       margin-bottom: 1.5rem;
+      gap: 1rem;
     }
     
     .card-title {
-      font-size: 1.25rem;
+      font-size: clamp(1.1rem, 3vw, 1.25rem);
       font-weight: 600;
       color: var(--dark);
       margin: 0;
     }
     
     /* Table Styles */
+    .data-table-container {
+      width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    
     .data-table {
       width: 100%;
       border-collapse: separate;
       border-spacing: 0;
+      min-width: 800px;
     }
     
     .data-table thead th {
@@ -129,6 +147,7 @@
       font-size: 0.75rem;
       letter-spacing: 0.5px;
       border: none;
+      white-space: nowrap;
     }
     
     .data-table thead th:first-child {
@@ -153,6 +172,11 @@
       padding: 1rem;
       border-bottom: 1px solid var(--light-gray);
       vertical-align: middle;
+      white-space: nowrap;
+    }
+    
+    .data-table tbody td:not(:first-child) {
+      white-space: normal;
     }
     
     .data-table tbody tr:last-child td {
@@ -186,6 +210,8 @@
       font-family: 'Courier New', monospace;
       font-size: 0.85rem;
       line-height: 1.5;
+      white-space: pre;
+      overflow-x: auto;
     }
     
     /* Reason Toggle */
@@ -200,6 +226,7 @@
       font-size: 0.85rem;
       color: var(--gray);
       line-height: 1.6;
+      white-space: normal;
     }
     
     .btn-reason {
@@ -212,6 +239,7 @@
       color: var(--primary);
       transition: all 0.2s ease;
       font-weight: 500;
+      white-space: nowrap;
     }
     
     .btn-reason:hover {
@@ -219,25 +247,136 @@
       color: white;
     }
     
-    /* Responsive */
-    @media (max-width: 768px) {
-      .dashboard-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 1rem;
-      }
-      
+    /* Responsive Improvements */
+    @media (max-width: 992px) {
       .dashboard-container {
-        padding: 0 1rem;
+        padding: 0 1.25rem;
       }
       
       .dashboard-card {
-        padding: 1.5rem 1rem;
+        padding: 1.25rem;
+      }
+      
+      .data-table tbody td {
+        padding: 0.75rem;
+      }
+    }
+    
+    @media (max-width: 768px) {
+      .dashboard-container {
+        padding: 0 1rem;
+        margin: 1rem auto;
+      }
+      
+      .dashboard-header {
+        flex-direction: row;
+        align-items: center;
+      }
+      
+      .brand-container {
+        flex-direction: row;
+        align-items: center;
+      }
+      
+      .dashboard-card {
+        padding: 1rem;
+        border-radius: 10px;
+      }
+      
+      .card-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      
+      .data-table thead th,
+      .data-table tbody td {
+        padding: 0.5rem;
+        font-size: 0.8rem;
+      }
+      
+      .sales-data {
+        font-size: 0.75rem;
+        padding: 0.5rem;
+      }
+      
+      .btn-reason {
+        padding: 0.4rem 0.6rem;
+        font-size: 0.8rem;
+      }
+    }
+    
+    @media (max-width: 576px) {
+      .dashboard-container {
+        padding: 0 0.75rem;
+      }
+      
+      .brand-logo {
+        width: 40px;
+        height: 40px;
+        font-size: 1.25rem;
+      }
+      
+      .period-badge {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.8rem;
+      }
+      
+      .dashboard-card {
+        padding: 0.75rem;
+        border-radius: 8px;
+      }
+      
+      .data-table thead th {
+        font-size: 0.7rem;
+        padding: 0.4rem;
+      }
+      
+      .data-table tbody td {
+        padding: 0.5rem 0.4rem;
+        font-size: 0.75rem;
+      }
+      
+      .badge {
+        font-size: 0.7rem;
+        padding: 0.2rem 0.4rem;
+      }
+    }
+    
+    /* Print Styles */
+    @media print {
+      body {
+        background-color: white;
+        font-size: 12pt;
+      }
+      
+      .dashboard-container {
+        padding: 0;
+        margin: 0;
+        max-width: 100%;
+      }
+      
+      .dashboard-header {
+        flex-direction: row;
+        padding-bottom: 0.5rem;
+        margin-bottom: 0.5rem;
+      }
+      
+      .dashboard-card {
+        box-shadow: none;
+        border: 1px solid #ddd;
+        page-break-inside: avoid;
       }
       
       .data-table {
-        display: block;
-        overflow-x: auto;
+        min-width: 100%;
+      }
+      
+      .btn-reason {
+        display: none;
+      }
+      
+      .reason-row {
+        display: table-row !important;
       }
     }
   </style>
@@ -270,7 +409,7 @@
           </div>
         </div>
         
-        <div class="table-responsive">
+        <div class="data-table-container">
           <table class="data-table">
             <thead>
               <tr>
@@ -361,6 +500,15 @@
       }
     `;
     document.head.appendChild(style);
+    
+    // Handle window resize
+    function handleResize() {
+      // Adjust table layout if needed
+    }
+    
+    // Initialize and add resize listener
+    window.addEventListener('resize', handleResize);
+    handleResize();
   </script>
 </body>
 </html>

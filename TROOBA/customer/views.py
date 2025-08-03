@@ -170,6 +170,11 @@ def fetch_and_store_all(request):
 # From now we will start the real process 
 # top_20_selling_products_till_2024_view
 # Gives data from April , May , June high sales 
+
+
+# ----------------------------------------------------------------------------------------------------------------------------------
+
+import logging
 from django.db.models import Sum
 from collections import defaultdict
 import json
@@ -181,7 +186,11 @@ from django.shortcuts import render
 import os
 import requests
 from dotenv import load_dotenv
-from .models import ProductVariant, OrderLineItem, CustomerPromotion_April, CustomerPromotion_May, CustomerPromotionJune, Prompt
+from django.http import JsonResponse
+from .models import ProductVariant, OrderLineItem, CustomerPromotion_April, CustomerPromotion_May, CustomerPromotion_June, Prompt, Product
+
+# Set up a logger for debugging
+logger = logging.getLogger(__name__)
 
 def top_20_selling_products_till_2024_view(request):
     start_date = make_aware(datetime(2025, 4, 1))
@@ -198,10 +207,10 @@ def top_20_selling_products_till_2024_view(request):
 
     # Step 2: Filter out 46349 quantities
     filtered_variants = [v for v in top_variants if v['total_quantity_sold'] != 46349]
-    variant_ids = [item['variant_id'] for item in filtered_variants]
+    variant_ids_from_sales = [item['variant_id'] for item in filtered_variants]
 
     # Step 3: Fetch variant objects (skip empty SKUs)
-    variants_qs = ProductVariant.objects.select_related('product').filter(id__in=variant_ids).exclude(sku__isnull=True).exclude(sku='')
+    variants_qs = ProductVariant.objects.select_related('product').filter(id__in=variant_ids_from_sales).exclude(sku__isnull=True).exclude(sku='')
     variants = {v.id: v for v in variants_qs}
 
     results = []
@@ -221,59 +230,76 @@ def top_20_selling_products_till_2024_view(request):
             "product_type": product.product_type,
             "total_quantity_sold": item['total_quantity_sold'],
         })
-        if len(results) >= 10:
+        if len(results) >= 5:
             break
 
     # ====== Prediction Begins Here ======
-
-    # Step 4: Fetch promotional data using the shopify_id and associate it with sku
-    promo_data_by_sku = defaultdict(dict)  # To hold promotional data indexed by SKU
-
+    
+    # Step 4: Fetch promotional data and associate it with SKU
+    # First, get the list of top-selling SKUs and their corresponding ProductVariant objects.
     variant_skus = [r["variant_sku"] for r in results if r["variant_sku"]]
     variant_objs = ProductVariant.objects.select_related('product').filter(sku__in=variant_skus)
-    variant_map = {v.sku: v for v in variant_objs}
-    variant_ids = [v.id for v in variant_objs]
+    
+    # Map the variant_id (primary key) to the ProductVariant object for later use
+    variant_id_map = {v.id: v for v in variant_objs}
+    
+    # Get the list of shopify_ids for the top-selling variants, this is what's in the promotion tables.
+    top_variant_shopify_ids = [v.shopify_id for v in variant_objs]
+
+    # This dictionary will store the final promotional data keyed by SKU
+    promo_data_by_sku = defaultdict(dict)
+    
+    # This dictionary is a temporary map from shopify_id to SKU to simplify the loop below
+    shopify_id_to_sku_map = {v.shopify_id: v.sku for v in variant_objs}
 
     promo_models = {
         '2025-04': CustomerPromotion_April,
         '2025-05': CustomerPromotion_May,
-        '2025-06': CustomerPromotionJune,
+        '2025-06': CustomerPromotion_June,
     }
 
     for month, model in promo_models.items():
-        promo_qs = model.objects.filter(variant_id__in=variant_ids)
+        # Query promotion records using the shopify_id as the filter
+        promo_qs = model.objects.filter(variant_id__in=top_variant_shopify_ids)
         for promo in promo_qs:
-            shopify_id = promo.variant_id  # We get the shopify_id from the variant_id in promotions
-            variant_sku = variant_map.get(shopify_id).sku if shopify_id in variant_map else None  # Map to sku
+            shopify_id = promo.variant_id
+            variant_sku = shopify_id_to_sku_map.get(shopify_id)
             if variant_sku:
                 promo_data_by_sku[variant_sku][month] = {
-                    'impressions': getattr(promo, 'impressions', getattr(promo, 'impr', 0)),
+                    'impressions': promo.impressions,
                     'clicks': promo.clicks,
                     'revenue': float(promo.revenue or 0),
+                    'units_sold': promo.units_sold,
                 }
+                logger.debug(f"Promo data for SKU {variant_sku} in {month}: {promo_data_by_sku[variant_sku][month]}")
 
     # Historical sales April–June 2025
     monthly_sales = defaultdict(lambda: defaultdict(int))
     order_items = OrderLineItem.objects.filter(
-        variant_id__in=variant_ids,
+        variant_id__in=variant_ids_from_sales,
         order__order_date__gte=start_date,
         order__order_date__lt=end_date
     )
     for item in order_items:
         month = item.order.order_date.strftime('%Y-%m')
-        monthly_sales[item.variant.sku][month] += item.quantity
+        # Use the variant_id map to get the SKU
+        variant_obj = variant_id_map.get(item.variant_id)
+        if variant_obj:
+            monthly_sales[variant_obj.sku][month] += item.quantity
 
     # Actual July sales
     july_start = make_aware(datetime(2025, 7, 1))
     aug_start = make_aware(datetime(2025, 8, 1))
     actual_july_sales = defaultdict(int)
     july_orders = OrderLineItem.objects.filter(
-        variant_id__in=variant_ids,
+        variant_id__in=variant_ids_from_sales,
         order__order_date__gte=july_start,
         order__order_date__lt=aug_start
     )
     for item in july_orders:
-        actual_july_sales[item.variant.sku] += item.quantity
+        variant_obj = variant_id_map.get(item.variant_id)
+        if variant_obj:
+            actual_july_sales[variant_obj.sku] += item.quantity
 
     # Load Gemini API Key
     load_dotenv()
@@ -295,9 +321,9 @@ def top_20_selling_products_till_2024_view(request):
         payload = {
             "contents": [{"parts": [{"text": prompt_text}]}],
             "generationConfig": {
-                "temperature": 0.0,  # ensures deterministic output
-                "topK": 1,           # optional: narrow responses
-                "topP": 0.9          # optional: reduce randomness
+                "temperature": 0.0,
+                "topK": 1,
+                "topP": 0.9
             }
         }
         try:
@@ -306,16 +332,17 @@ def top_20_selling_products_till_2024_view(request):
             data = response.json()
             return data['candidates'][0]['content']['parts'][0]['text'].strip()
         except Exception as e:
+            logger.error(f"Gemini API Error: {str(e)}")
             return f"[Gemini Error] {str(e)}"
 
     predictions = []
     for sku in variant_skus:
-        variant = variant_map.get(sku)
+        variant = variant_objs.get(sku=sku)
         if not variant:
             continue
         product = variant.product
         sales_data = monthly_sales.get(sku, {})
-        promo_data = promo_data_by_sku.get(sku, {})  # Fetch promo data using SKU
+        promo_data = promo_data_by_sku.get(sku, {})
 
         prompt = f"""{prompt_template}
         ### PRODUCT DETAILS
@@ -336,7 +363,6 @@ def top_20_selling_products_till_2024_view(request):
         gemini_response = call_gemini(prompt)
         actual_qty = actual_july_sales.get(sku, 0)
 
-        # Extract predicted quantity
         lines = gemini_response.strip().splitlines()
         predicted_qty = None
         reason_lines = []
@@ -347,21 +373,19 @@ def top_20_selling_products_till_2024_view(request):
                 predicted_qty = int(match.group(1))
                 break
 
-        # Fallback to extracting any reasonable number if no direct match
         if predicted_qty is None:
-            numbers = [int(n) for n in re.findall(r"\b\d+\b", line)]
-            valid_numbers = [n for n in numbers if n < 500]  # Ensure it's not outlandishly high
-            if valid_numbers:
-                predicted_qty = max(valid_numbers)
+            for line in lines:
+                numbers = [int(n) for n in re.findall(r"\b\d+\b", line)]
+                valid_numbers = [n for n in numbers if n < 500]
+                if valid_numbers:
+                    predicted_qty = max(valid_numbers)
 
         if predicted_qty is None:
-            predicted_qty = 0  # Default to 0 if nothing found
+            predicted_qty = 0
 
-        # Extract the reasoning for prediction
         for line in lines:
-            if any(c.isalpha() for c in line):  # If the line contains any alphabetic character
+            if any(c.isalpha() for c in line):
                 reason_lines.append(line)
-
         reason = " ".join(reason_lines).strip() if reason_lines else "N/A"
 
         predictions.append({
@@ -374,13 +398,11 @@ def top_20_selling_products_till_2024_view(request):
             },
             "Predicted July Sales": predicted_qty,
             "Actual July Sales": actual_qty,
-            "Reason": reason
+            "Reason": reason,
         })
-
-        time.sleep(1.2)  # Gemini API rate limit
+        time.sleep(1.2)
 
     return render(request, "customer/predictions.html", {"predictions": predictions})
-
 
 # Directly gets the highest sales in April , May , June month and then predicts using gemini then compares with original data
 

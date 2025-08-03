@@ -109,7 +109,7 @@ class Prompt(models.Model):
 
 from django.db import models
 
-class CustomerPromotionJune(models.Model):
+class CustomerPromotion_June(models.Model):
     title = models.CharField(max_length=255)
     item_id = models.CharField(max_length=255)
     product_id = models.BigIntegerField()
@@ -120,7 +120,7 @@ class CustomerPromotionJune(models.Model):
     cost = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     conv_value = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     conv_value_per_cost = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    impr = models.IntegerField(default=0)
+    impressions = models.IntegerField(default=0)
     ctr = models.CharField(max_length=20, null=True, blank=True)
     avg_cpc = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     conversions = models.DecimalField(max_digits=12, decimal_places=2, default=0)

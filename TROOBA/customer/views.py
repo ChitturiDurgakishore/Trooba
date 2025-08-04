@@ -174,29 +174,263 @@ def fetch_and_store_all(request):
 
 # ----------------------------------------------------------------------------------------------------------------------------------
 
+# import logging
+# from django.db.models import Sum
+# from collections import defaultdict
+# import json
+# import re
+# import time
+# from datetime import datetime
+# from django.utils.timezone import make_aware
+# from django.shortcuts import render
+# import os
+# import requests
+# from dotenv import load_dotenv
+# from django.http import JsonResponse
+# from .models import ProductVariant, OrderLineItem, CustomerPromotion_April, CustomerPromotion_May, CustomerPromotion_June, Prompt, Product
+
+# # Set up a logger for debugging
+# logger = logging.getLogger(__name__)
+
+# def top_20_selling_products_till_2024_view(request):
+#     start_date = make_aware(datetime(2025, 4, 1))
+#     end_date = make_aware(datetime(2025, 7, 1))  # July not included
+
+#     # Step 1: Aggregate variant sales
+#     top_variants = (
+#         OrderLineItem.objects
+#         .filter(order__order_date__gte=start_date, order__order_date__lt=end_date)
+#         .values('variant_id')
+#         .annotate(total_quantity_sold=Sum('quantity'))
+#         .order_by('-total_quantity_sold')
+#     )
+
+#     # Step 2: Filter out 46349 quantities
+#     filtered_variants = [v for v in top_variants if v['total_quantity_sold'] != 46349]
+#     variant_ids_from_sales = [item['variant_id'] for item in filtered_variants]
+
+#     # Step 3: Fetch variant objects (skip empty SKUs)
+#     variants_qs = ProductVariant.objects.select_related('product').filter(id__in=variant_ids_from_sales).exclude(sku__isnull=True).exclude(sku='')
+#     variants = {v.id: v for v in variants_qs}
+
+#     results = []
+#     for item in filtered_variants:
+#         variant = variants.get(item['variant_id'])
+#         if not variant:
+#             continue
+#         product = variant.product
+#         results.append({
+#             "product_id": product.id if product else None,
+#             "product_shopify_id": product.shopify_id if product else None,
+#             "product_title": product.title if product else None,
+#             "variant_title": variant.title,
+#             "variant_sku": variant.sku,
+#             "price": variant.price,
+#             "vendor": product.vendor,
+#             "product_type": product.product_type,
+#             "total_quantity_sold": item['total_quantity_sold'],
+#         })
+#         if len(results) >= 5:
+#             break
+
+#     # ====== Prediction Begins Here ======
+    
+#     # Step 4: Fetch promotional data and associate it with SKU
+#     # First, get the list of top-selling SKUs and their corresponding ProductVariant objects.
+#     variant_skus = [r["variant_sku"] for r in results if r["variant_sku"]]
+#     variant_objs = ProductVariant.objects.select_related('product').filter(sku__in=variant_skus)
+    
+#     # Map the variant_id (primary key) to the ProductVariant object for later use
+#     variant_id_map = {v.id: v for v in variant_objs}
+    
+#     # Get the list of shopify_ids for the top-selling variants, this is what's in the promotion tables.
+#     top_variant_shopify_ids = [v.shopify_id for v in variant_objs]
+
+#     # This dictionary will store the final promotional data keyed by SKU
+#     promo_data_by_sku = defaultdict(dict)
+    
+#     # This dictionary is a temporary map from shopify_id to SKU to simplify the loop below
+#     shopify_id_to_sku_map = {v.shopify_id: v.sku for v in variant_objs}
+
+#     promo_models = {
+#         '2025-04': CustomerPromotion_April,
+#         '2025-05': CustomerPromotion_May,
+#         '2025-06': CustomerPromotion_June,
+#     }
+
+#     for month, model in promo_models.items():
+#         # Query promotion records using the shopify_id as the filter
+#         promo_qs = model.objects.filter(variant_id__in=top_variant_shopify_ids)
+#         for promo in promo_qs:
+#             shopify_id = promo.variant_id
+#             variant_sku = shopify_id_to_sku_map.get(shopify_id)
+#             if variant_sku:
+#                 promo_data_by_sku[variant_sku][month] = {
+#                     'impressions': promo.impressions,
+#                     'clicks': promo.clicks,
+#                     'revenue': float(promo.revenue or 0),
+#                     'units_sold': promo.units_sold,
+#                 }
+#                 logger.debug(f"Promo data for SKU {variant_sku} in {month}: {promo_data_by_sku[variant_sku][month]}")
+
+#     # Historical sales April–June 2025
+#     monthly_sales = defaultdict(lambda: defaultdict(int))
+#     order_items = OrderLineItem.objects.filter(
+#         variant_id__in=variant_ids_from_sales,
+#         order__order_date__gte=start_date,
+#         order__order_date__lt=end_date
+#     )
+#     for item in order_items:
+#         month = item.order.order_date.strftime('%Y-%m')
+#         # Use the variant_id map to get the SKU
+#         variant_obj = variant_id_map.get(item.variant_id)
+#         if variant_obj:
+#             monthly_sales[variant_obj.sku][month] += item.quantity
+
+#     # Actual July sales
+#     july_start = make_aware(datetime(2025, 7, 1))
+#     aug_start = make_aware(datetime(2025, 8, 1))
+#     actual_july_sales = defaultdict(int)
+#     july_orders = OrderLineItem.objects.filter(
+#         variant_id__in=variant_ids_from_sales,
+#         order__order_date__gte=july_start,
+#         order__order_date__lt=aug_start
+#     )
+#     for item in july_orders:
+#         variant_obj = variant_id_map.get(item.variant_id)
+#         if variant_obj:
+#             actual_july_sales[variant_obj.sku] += item.quantity
+
+#     # Load Gemini API Key
+#     load_dotenv()
+#     GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+#     if not GEMINI_API_KEY:
+#         return render(request, "customer/predictions.html", {"predictions": [], "error": "GEMINI_API_KEY missing"})
+
+#     try:
+#         prompt_template = Prompt.objects.get(type='MainPrompt').prompt.strip()
+#     except Prompt.DoesNotExist:
+#         return render(request, "customer/predictions.html", {"predictions": [], "error": "Prompt with type=MainPrompt not found"})
+
+#     def call_gemini(prompt_text):
+#         url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
+#         headers = {
+#             "Content-Type": "application/json",
+#             "X-goog-api-key": GEMINI_API_KEY
+#         }
+#         payload = {
+#             "contents": [{"parts": [{"text": prompt_text}]}],
+#             "generationConfig": {
+#                 "temperature": 0.0,
+#                 "topK": 1,
+#                 "topP": 0.9
+#             }
+#         }
+#         try:
+#             response = requests.post(url, headers=headers, data=json.dumps(payload))
+#             response.raise_for_status()
+#             data = response.json()
+#             return data['candidates'][0]['content']['parts'][0]['text'].strip()
+#         except Exception as e:
+#             logger.error(f"Gemini API Error: {str(e)}")
+#             return f"[Gemini Error] {str(e)}"
+
+#     predictions = []
+#     for sku in variant_skus:
+#         variant = variant_objs.get(sku=sku)
+#         if not variant:
+#             continue
+#         product = variant.product
+#         sales_data = monthly_sales.get(sku, {})
+#         promo_data = promo_data_by_sku.get(sku, {})
+
+#         prompt = f"""{prompt_template}
+#         ### PRODUCT DETAILS
+#         Title: {product.title}
+#         SKU: {sku}
+#         Type: {product.product_type}
+#         Vendor: {product.vendor}
+
+#         ### HISTORICAL SALES (Apr–Jun 2025)
+#         {json.dumps(sales_data, indent=2)}
+
+#         ### PROMOTION SUMMARY (Apr–Jun 2025)
+#         {json.dumps(promo_data, indent=2)}
+
+#         Q: Based on the above data, what is the expected quantity sold in July 2025?
+#         Return only the number and a short reason explaining your logic."""
+
+#         gemini_response = call_gemini(prompt)
+#         actual_qty = actual_july_sales.get(sku, 0)
+
+#         lines = gemini_response.strip().splitlines()
+#         predicted_qty = None
+#         reason_lines = []
+
+#         for line in lines:
+#             match = re.search(r"[Ff]orecast[:\s\*]*([0-9]{1,3})\b", line)
+#             if match:
+#                 predicted_qty = int(match.group(1))
+#                 break
+
+#         if predicted_qty is None:
+#             for line in lines:
+#                 numbers = [int(n) for n in re.findall(r"\b\d+\b", line)]
+#                 valid_numbers = [n for n in numbers if n < 500]
+#                 if valid_numbers:
+#                     predicted_qty = max(valid_numbers)
+
+#         if predicted_qty is None:
+#             predicted_qty = 0
+
+#         for line in lines:
+#             if any(c.isalpha() for c in line):
+#                 reason_lines.append(line)
+#         reason = " ".join(reason_lines).strip() if reason_lines else "N/A"
+
+#         predictions.append({
+#             "SKU": sku,
+#             "Product": product.title,
+#             "Past Sales": {
+#                 "2025-04": sales_data.get("2025-04", 0),
+#                 "2025-05": sales_data.get("2025-05", 0),
+#                 "2025-06": sales_data.get("2025-06", 0),
+#             },
+#             "Predicted July Sales": predicted_qty,
+#             "Actual July Sales": actual_qty,
+#             "Reason": reason,
+#         })
+#         time.sleep(1.2)
+
+#     return render(request, "customer/predictions.html", {"predictions": predictions})
+
+# Directly gets the highest sales in April , May , June month and then predicts using gemini then compares with original data
+
+
 import logging
-from django.db.models import Sum
-from collections import defaultdict
+import os
 import json
 import re
 import time
+from collections import defaultdict
 from datetime import datetime
 from django.utils.timezone import make_aware
 from django.shortcuts import render
-import os
-import requests
 from dotenv import load_dotenv
-from django.http import JsonResponse
-from .models import ProductVariant, OrderLineItem, CustomerPromotion_April, CustomerPromotion_May, CustomerPromotion_June, Prompt, Product
+from django.db.models import Sum
+import openai
 
-# Set up a logger for debugging
+from .models import (
+    ProductVariant, OrderLineItem, CustomerPromotion_April,
+    CustomerPromotion_May, CustomerPromotion_June, Prompt, Product
+)
+
 logger = logging.getLogger(__name__)
 
 def top_20_selling_products_till_2024_view(request):
     start_date = make_aware(datetime(2025, 4, 1))
-    end_date = make_aware(datetime(2025, 7, 1))  # July not included
+    end_date = make_aware(datetime(2025, 7, 1))
 
-    # Step 1: Aggregate variant sales
     top_variants = (
         OrderLineItem.objects
         .filter(order__order_date__gte=start_date, order__order_date__lt=end_date)
@@ -205,12 +439,13 @@ def top_20_selling_products_till_2024_view(request):
         .order_by('-total_quantity_sold')
     )
 
-    # Step 2: Filter out 46349 quantities
     filtered_variants = [v for v in top_variants if v['total_quantity_sold'] != 46349]
     variant_ids_from_sales = [item['variant_id'] for item in filtered_variants]
 
-    # Step 3: Fetch variant objects (skip empty SKUs)
-    variants_qs = ProductVariant.objects.select_related('product').filter(id__in=variant_ids_from_sales).exclude(sku__isnull=True).exclude(sku='')
+    variants_qs = ProductVariant.objects.select_related('product').filter(
+        id__in=variant_ids_from_sales
+    ).exclude(sku__isnull=True).exclude(sku='')
+
     variants = {v.id: v for v in variants_qs}
 
     results = []
@@ -220,9 +455,9 @@ def top_20_selling_products_till_2024_view(request):
             continue
         product = variant.product
         results.append({
-            "product_id": product.id if product else None,
-            "product_shopify_id": product.shopify_id if product else None,
-            "product_title": product.title if product else None,
+            "product_id": product.id,
+            "product_shopify_id": product.shopify_id,
+            "product_title": product.title,
             "variant_title": variant.title,
             "variant_sku": variant.sku,
             "price": variant.price,
@@ -233,23 +468,11 @@ def top_20_selling_products_till_2024_view(request):
         if len(results) >= 5:
             break
 
-    # ====== Prediction Begins Here ======
-    
-    # Step 4: Fetch promotional data and associate it with SKU
-    # First, get the list of top-selling SKUs and their corresponding ProductVariant objects.
     variant_skus = [r["variant_sku"] for r in results if r["variant_sku"]]
     variant_objs = ProductVariant.objects.select_related('product').filter(sku__in=variant_skus)
-    
-    # Map the variant_id (primary key) to the ProductVariant object for later use
     variant_id_map = {v.id: v for v in variant_objs}
-    
-    # Get the list of shopify_ids for the top-selling variants, this is what's in the promotion tables.
     top_variant_shopify_ids = [v.shopify_id for v in variant_objs]
-
-    # This dictionary will store the final promotional data keyed by SKU
     promo_data_by_sku = defaultdict(dict)
-    
-    # This dictionary is a temporary map from shopify_id to SKU to simplify the loop below
     shopify_id_to_sku_map = {v.shopify_id: v.sku for v in variant_objs}
 
     promo_models = {
@@ -259,7 +482,6 @@ def top_20_selling_products_till_2024_view(request):
     }
 
     for month, model in promo_models.items():
-        # Query promotion records using the shopify_id as the filter
         promo_qs = model.objects.filter(variant_id__in=top_variant_shopify_ids)
         for promo in promo_qs:
             shopify_id = promo.variant_id
@@ -271,9 +493,7 @@ def top_20_selling_products_till_2024_view(request):
                     'revenue': float(promo.revenue or 0),
                     'units_sold': promo.units_sold,
                 }
-                logger.debug(f"Promo data for SKU {variant_sku} in {month}: {promo_data_by_sku[variant_sku][month]}")
 
-    # Historical sales April–June 2025
     monthly_sales = defaultdict(lambda: defaultdict(int))
     order_items = OrderLineItem.objects.filter(
         variant_id__in=variant_ids_from_sales,
@@ -282,12 +502,10 @@ def top_20_selling_products_till_2024_view(request):
     )
     for item in order_items:
         month = item.order.order_date.strftime('%Y-%m')
-        # Use the variant_id map to get the SKU
         variant_obj = variant_id_map.get(item.variant_id)
         if variant_obj:
             monthly_sales[variant_obj.sku][month] += item.quantity
 
-    # Actual July sales
     july_start = make_aware(datetime(2025, 7, 1))
     aug_start = make_aware(datetime(2025, 8, 1))
     actual_july_sales = defaultdict(int)
@@ -301,92 +519,97 @@ def top_20_selling_products_till_2024_view(request):
         if variant_obj:
             actual_july_sales[variant_obj.sku] += item.quantity
 
-    # Load Gemini API Key
     load_dotenv()
-    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-    if not GEMINI_API_KEY:
-        return render(request, "customer/predictions.html", {"predictions": [], "error": "GEMINI_API_KEY missing"})
+    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+    if not OPENAI_API_KEY:
+        return render(request, "customer/predictions.html", {
+            "predictions": [],
+            "error": "OPENAI_API_KEY missing"
+        })
+
+    openai.api_key = OPENAI_API_KEY
 
     try:
         prompt_template = Prompt.objects.get(type='MainPrompt').prompt.strip()
     except Prompt.DoesNotExist:
-        return render(request, "customer/predictions.html", {"predictions": [], "error": "Prompt with type=MainPrompt not found"})
+        return render(request, "customer/predictions.html", {
+            "predictions": [],
+            "error": "Prompt with type=MainPrompt not found"
+        })
 
-    def call_gemini(prompt_text):
-        url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
-        headers = {
-            "Content-Type": "application/json",
-            "X-goog-api-key": GEMINI_API_KEY
-        }
-        payload = {
-            "contents": [{"parts": [{"text": prompt_text}]}],
-            "generationConfig": {
-                "temperature": 0.0,
-                "topK": 1,
-                "topP": 0.9
-            }
-        }
+    def call_openai(prompt_text):
         try:
-            response = requests.post(url, headers=headers, data=json.dumps(payload))
-            response.raise_for_status()
-            data = response.json()
-            return data['candidates'][0]['content']['parts'][0]['text'].strip()
+            response = openai.ChatCompletion.create(
+                model="gpt-4o",
+                messages=[{"role": "user", "content": prompt_text}],
+                max_tokens=300,
+                temperature=0.2
+            )
+            return response.choices[0].message['content'].strip()
         except Exception as e:
-            logger.error(f"Gemini API Error: {str(e)}")
-            return f"[Gemini Error] {str(e)}"
+            logger.error(f"OpenAI API Error: {str(e)}")
+            return ""
 
     predictions = []
     for sku in variant_skus:
-        variant = variant_objs.get(sku=sku)
+        variant = None
+        for v in variant_objs:
+            if v.sku == sku:
+                variant = v
+                break
         if not variant:
             continue
         product = variant.product
         sales_data = monthly_sales.get(sku, {})
         promo_data = promo_data_by_sku.get(sku, {})
 
+        # Build prompt - UPDATED to instruct model clearly to respond ONLY with JSON inside <json> tags
         prompt = f"""{prompt_template}
-        ### PRODUCT DETAILS
-        Title: {product.title}
-        SKU: {sku}
-        Type: {product.product_type}
-        Vendor: {product.vendor}
 
-        ### HISTORICAL SALES (Apr–Jun 2025)
-        {json.dumps(sales_data, indent=2)}
+### PRODUCT DETAILS
+Title: {product.title}
+SKU: {sku}
+Type: {product.product_type}
+Vendor: {product.vendor}
 
-        ### PROMOTION SUMMARY (Apr–Jun 2025)
-        {json.dumps(promo_data, indent=2)}
+### HISTORICAL SALES (Apr–Jun 2025)
+{json.dumps(sales_data, indent=2)}
 
-        Q: Based on the above data, what is the expected quantity sold in July 2025?
-        Return only the number and a short reason explaining your logic."""
+### PROMOTION SUMMARY (Apr–Jun 2025)
+{json.dumps(promo_data, indent=2)}
 
-        gemini_response = call_gemini(prompt)
-        actual_qty = actual_july_sales.get(sku, 0)
+Q: Based on the above data, predict the total quantity sold in July 2025.
 
-        lines = gemini_response.strip().splitlines()
-        predicted_qty = None
-        reason_lines = []
+Return ONLY the JSON enclosed in <json> and </json> tags, with no other text or explanation.
 
-        for line in lines:
-            match = re.search(r"[Ff]orecast[:\s\*]*([0-9]{1,3})\b", line)
+<json>
+{{
+  "predicted_july_sales": <integer>,
+  "reason": "<short explanation>"
+}}
+</json>
+"""
+
+        openai_response = call_openai(prompt)
+        logger.debug(f"Raw OpenAI response for {sku}: {openai_response}")
+
+        # Parse response strictly inside <json>...</json> tags
+        try:
+            match = re.search(r"<json>(.*?)</json>", openai_response, re.DOTALL)
             if match:
-                predicted_qty = int(match.group(1))
-                break
-
-        if predicted_qty is None:
-            for line in lines:
-                numbers = [int(n) for n in re.findall(r"\b\d+\b", line)]
-                valid_numbers = [n for n in numbers if n < 500]
-                if valid_numbers:
-                    predicted_qty = max(valid_numbers)
-
-        if predicted_qty is None:
+                json_str = match.group(1).strip()
+            else:
+                # Fallback: Try to parse entire response directly if tags missing (optional)
+                json_str = openai_response.strip()
+            parsed = json.loads(json_str)
+            predicted_qty = int(parsed.get("predicted_july_sales", 0))
+            reason = parsed.get("reason", "No reason provided.")
+        except Exception as e:
+            logger.error(f"Failed to parse OpenAI response for SKU {sku}: {e}")
             predicted_qty = 0
+            reason = "Invalid response from OpenAI."
 
-        for line in lines:
-            if any(c.isalpha() for c in line):
-                reason_lines.append(line)
-        reason = " ".join(reason_lines).strip() if reason_lines else "N/A"
+        actual_qty = actual_july_sales.get(sku, 0)
 
         predictions.append({
             "SKU": sku,
@@ -400,13 +623,11 @@ def top_20_selling_products_till_2024_view(request):
             "Actual July Sales": actual_qty,
             "Reason": reason,
         })
+
+        # Rate limit to avoid hitting API limits
         time.sleep(1.2)
 
     return render(request, "customer/predictions.html", {"predictions": predictions})
-
-# Directly gets the highest sales in April , May , June month and then predicts using gemini then compares with original data
-
-
 
 
 

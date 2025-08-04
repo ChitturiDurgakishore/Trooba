@@ -5,9 +5,12 @@
   <meta charset="UTF-8">
   <title>TROOBA | Sales Forecast Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="TROOBA Sales Forecast Dashboard for July 2025">
+  <link rel="icon" href="{% static 'favicon.ico' %}">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
   <style>
     :root {
       --primary: #4361ee;
@@ -20,21 +23,19 @@
       --success: #10b981;
       --info: #3b82f6;
     }
-    
+
     body {
       background-color: #f8fafc;
       font-family: 'Inter', sans-serif;
       color: var(--dark);
-      line-height: 1.6;
     }
-    
+
     .dashboard-container {
       max-width: 1400px;
       margin: 2rem auto;
       padding: 0 1.5rem;
     }
-    
-    /* Header Styles */
+
     .dashboard-header {
       display: flex;
       justify-content: space-between;
@@ -43,13 +44,13 @@
       padding-bottom: 1rem;
       border-bottom: 1px solid var(--light-gray);
     }
-    
+
     .brand-container {
       display: flex;
       align-items: center;
       gap: 1rem;
     }
-    
+
     .brand-logo {
       width: 48px;
       height: 48px;
@@ -62,21 +63,20 @@
       font-weight: 700;
       font-size: 1.5rem;
     }
-    
+
     .brand-title {
       font-size: 1.8rem;
       font-weight: 700;
-      color: var(--dark);
       margin: 0;
     }
-    
+
     .page-subtitle {
       font-size: 0.95rem;
       color: var(--gray);
       font-weight: 500;
       margin: 0;
     }
-    
+
     .period-badge {
       background-color: var(--primary);
       color: white;
@@ -88,38 +88,34 @@
       align-items: center;
       gap: 0.5rem;
     }
-    
-    /* Card Styles */
+
     .dashboard-card {
       background-color: white;
       border-radius: 12px;
       padding: 2rem;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
       margin-bottom: 2rem;
       border: 1px solid var(--light-gray);
     }
-    
+
     .card-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
       margin-bottom: 1.5rem;
     }
-    
+
     .card-title {
       font-size: 1.25rem;
       font-weight: 600;
-      color: var(--dark);
-      margin: 0;
     }
-    
-    /* Table Styles */
+
     .data-table {
       width: 100%;
       border-collapse: separate;
       border-spacing: 0;
     }
-    
+
     .data-table thead th {
       background-color: var(--primary);
       color: white;
@@ -130,55 +126,31 @@
       letter-spacing: 0.5px;
       border: none;
     }
-    
-    .data-table thead th:first-child {
-      border-top-left-radius: 8px;
-      border-bottom-left-radius: 8px;
-    }
-    
-    .data-table thead th:last-child {
-      border-top-right-radius: 8px;
-      border-bottom-right-radius: 8px;
-    }
-    
+
     .data-table tbody tr {
       transition: all 0.2s ease;
     }
-    
+
     .data-table tbody tr:hover {
       background-color: rgba(67, 97, 238, 0.05);
     }
-    
+
     .data-table tbody td {
       padding: 1rem;
       border-bottom: 1px solid var(--light-gray);
       vertical-align: middle;
     }
-    
-    .data-table tbody tr:last-child td {
-      border-bottom: none;
-    }
-    
-    /* Badge Styles */
-    .badge {
-      padding: 0.3rem 0.6rem;
-      border-radius: 4px;
-      font-size: 0.8rem;
-      display: inline-block;
-      font-weight: 500;
-    }
-    
+
     .badge-actual {
       background: #f3f4f6;
       color: var(--dark);
     }
-    
+
     .badge-predicted {
       background: #e0f2fe;
       color: #0369a1;
     }
-    
-    /* JSON Data Display */
+
     .sales-data {
       background-color: var(--light);
       padding: 0.75rem;
@@ -187,21 +159,18 @@
       font-size: 0.85rem;
       line-height: 1.5;
     }
-    
-    /* Reason Toggle */
+
     .reason-row {
       background-color: var(--light);
       display: none;
     }
-    
+
     .reason-cell {
       padding: 1rem;
-      border-bottom: 1px solid var(--light-gray);
       font-size: 0.85rem;
       color: var(--gray);
-      line-height: 1.6;
     }
-    
+
     .btn-reason {
       cursor: pointer;
       font-size: 0.85rem;
@@ -210,15 +179,14 @@
       border: 1px solid var(--primary);
       background-color: white;
       color: var(--primary);
-      transition: all 0.2s ease;
       font-weight: 500;
     }
-    
+
     .btn-reason:hover {
       background-color: var(--primary);
       color: white;
     }
-    
+
     /* Responsive */
     @media (max-width: 768px) {
       .dashboard-header {
@@ -226,25 +194,31 @@
         align-items: flex-start;
         gap: 1rem;
       }
-      
-      .dashboard-container {
-        padding: 0 1rem;
-      }
-      
+
       .dashboard-card {
         padding: 1.5rem 1rem;
       }
-      
+
       .data-table {
         display: block;
         overflow-x: auto;
       }
     }
+
+    @media (max-width: 480px) {
+      .data-table td, .data-table th {
+        padding: 0.5rem;
+        font-size: 0.75rem;
+      }
+    }
   </style>
 </head>
 <body>
-  <div class="dashboard-container">
-    <!-- Dashboard Header -->
+  <div id="loading-spinner" style="text-align:center;margin:2rem;">
+    <i class="fas fa-spinner fa-spin fa-2x text-primary"></i>
+  </div>
+
+  <div class="dashboard-container" style="display:none;" id="main-content">
     <header class="dashboard-header">
       <div class="brand-container">
         <div class="brand-logo">T</div>
@@ -257,19 +231,16 @@
         <i class="fas fa-calendar-alt"></i> July 2025 Forecast
       </div>
     </header>
-    
-    <!-- Main Content -->
-    <main>
+
+    <main role="main" aria-label="Sales Predictions Table">
       <div class="dashboard-card">
         <div class="card-header">
           <h2 class="card-title">Top Product Sales Forecast</h2>
-          <div class="card-actions">
-            <button class="btn btn-sm btn-outline-secondary">
-              <i class="fas fa-download me-1"></i> Export
-            </button>
-          </div>
+          <button class="btn btn-sm btn-outline-secondary" disabled>
+            <i class="fas fa-download me-1"></i> Export (Coming Soon)
+          </button>
         </div>
-        
+
         <div class="table-responsive">
           <table class="data-table">
             <thead>
@@ -286,40 +257,38 @@
             <tbody>
               {% if predictions %}
                 {% for item in predictions %}
-                <tr>
-                  <td>{{ forloop.counter }}</td>
-                  <td><code>{{ item.SKU }}</code></td>
-                  <td>
-                    <div class="product-title">{{ item.Product }}</div>
-                  </td>
-                  <td>
-                    <div class="sales-data">
-                      <div>2025-04: {{ item|dict_key:"Past Sales"|dict_key:"2025-04"|default:"0" }}</div>
-                      <div>2025-05: {{ item|dict_key:"Past Sales"|dict_key:"2025-05"|default:"0" }}</div>
-                      <div>2025-06: {{ item|dict_key:"Past Sales"|dict_key:"2025-06"|default:"0" }}</div>
-                    </div>
-                  </td>
-                  <td>
-                    <span class="badge badge-predicted">{{ item|dict_key:"Predicted July Sales" }}</span>
-                  </td>
-                  <td>
-                    <span class="badge badge-actual">{{ item|dict_key:"Actual July Sales" }}</span>
-                  </td>
-                  <td>
-                    <button class="btn-reason" onclick="toggleReason('reason-{{ forloop.counter }}')">
-                      <i class="fas fa-comment-alt me-1"></i> Details
-                    </button>
-                  </td>
-                </tr>
-                <tr id="reason-{{ forloop.counter }}" class="reason-row">
-                  <td colspan="7" class="reason-cell">
-                    <strong>Analysis:</strong> {{ item|dict_key:"Reason"|linebreaksbr }}
-                  </td>
-                </tr>
+                  <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td><code>{{ item.SKU }}</code></td>
+                    <td>
+                      <div class="text-truncate" style="max-width:200px;" title="{{ item.Product }}">
+                        {{ item.Product }}
+                      </div>
+                    </td>
+                    <td>
+                      <div class="sales-data">
+                        <div>2025-04: {{ item|dict_key:"Past Sales"|dict_key:"2025-04"|default:"0" }}</div>
+                        <div>2025-05: {{ item|dict_key:"Past Sales"|dict_key:"2025-05"|default:"0" }}</div>
+                        <div>2025-06: {{ item|dict_key:"Past Sales"|dict_key:"2025-06"|default:"0" }}</div>
+                      </div>
+                    </td>
+                    <td><span class="badge badge-predicted">{{ item|dict_key:"Predicted July Sales" }}</span></td>
+                    <td><span class="badge badge-actual">{{ item|dict_key:"Actual July Sales" }}</span></td>
+                    <td>
+                      <button class="btn-reason" onclick="toggleReason('reason-{{ forloop.counter }}')">
+                        <i class="fas fa-comment-alt me-1"></i> Details
+                      </button>
+                    </td>
+                  </tr>
+                  <tr id="reason-{{ forloop.counter }}" class="reason-row">
+                    <td colspan="7" class="reason-cell">
+                      <strong>Analysis:</strong> {{ item|dict_key:"Reason"|linebreaksbr }}
+                    </td>
+                  </tr>
                 {% endfor %}
               {% else %}
                 <tr>
-                  <td colspan="7" style="text-align: center; padding: 2rem; color: var(--gray);">
+                  <td colspan="7" style="text-align:center;padding:2rem;color:var(--gray);">
                     <i class="fas fa-info-circle me-2"></i> No predictions available. Please run the forecast.
                   </td>
                 </tr>
@@ -334,33 +303,13 @@
   <script>
     function toggleReason(id) {
       const row = document.getElementById(id);
-      if (row.style.display === "table-row") {
-        row.style.display = "none";
-      } else {
-        row.style.display = "table-row";
-      }
+      row.style.display = row.style.display === "table-row" ? "none" : "table-row";
     }
 
-    // Add subtle animation to table rows
-    document.querySelectorAll('.data-table tbody tr').forEach((row, index) => {
-      if (!row.classList.contains('reason-row')) {
-        row.style.opacity = '0';
-        row.style.transform = 'translateY(10px)';
-        row.style.animation = `fadeInUp 0.3s ease forwards ${index * 0.05}s`;
-      }
+    window.addEventListener("load", () => {
+      document.getElementById("loading-spinner").style.display = "none";
+      document.getElementById("main-content").style.display = "block";
     });
-    
-    // Add CSS animation
-    const style = document.createElement('style');
-    style.textContent = `
-      @keyframes fadeInUp {
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
-      }
-    `;
-    document.head.appendChild(style);
   </script>
 </body>
 </html>

@@ -173,6 +173,7 @@ def fetch_and_store_all(request):
 
 
 # ----------------------------------------------------------------------------------------------------------------------------------
+
 import logging
 import re
 import json
@@ -198,7 +199,7 @@ from .models import (
 logger = logging.getLogger(__name__)
 
 def top_20_selling_products_till_2024_view(request):
-    start_date = make_aware(datetime(2025, 4, 1))
+    start_date = make_aware(datetime(2024, 7, 1))
     end_date = make_aware(datetime(2025, 7, 1))
 
     top_variants = (
@@ -234,7 +235,7 @@ def top_20_selling_products_till_2024_view(request):
             "product_type": product.product_type,
             "total_quantity_sold": item['total_quantity_sold'],
         })
-        if len(results) >= 10:
+        if len(results) >= 20:
             break
 
     variant_skus = [r["variant_sku"] for r in results if r["variant_sku"]]
@@ -268,7 +269,7 @@ def top_20_selling_products_till_2024_view(request):
     order_items = OrderLineItem.objects.filter(
         variant_id__in=variant_ids_from_sales,
         order__order_date__gte=start_date,
-        order__order_date__lt=end_date
+        order__order_date__lt=make_aware(datetime(2025, 7, 1))
     )
     for item in order_items:
         month = item.order.order_date.strftime('%Y-%m')
@@ -339,45 +340,62 @@ SKU: {sku}
 Type: {product.product_type}
 Vendor: {product.vendor}
 
-### HISTORICAL SALES (Apr–Jun 2025)
+### HISTORICAL SALES (Jul 2024–Jun 2025)
 {json.dumps(sales_data, indent=2)}
 
 ### PROMOTION SUMMARY (Apr–Jun 2025)
 {json.dumps(promo_data, indent=2)}
 
-Q: Based on the above data, what is the expected quantity sold in July 2025?
+Q: Based on the above data and market patterns, provide a demand forecast for this SKU.
 
-Return ONLY the following valid JSON format:
+Your output should include:
+- Daily sales forecasts for 7, 14, and 30 days
+- Predicted total units for July 2025
+- A confidence score
+- A clear reasoning summary
+
+Output Format (strict JSON only — no markdown, no comments):
+
 {{
-  "predicted_july_sales": int,
-  "reason": string
+  "confidence_score": float,
+  "reason": string,
+  "Predicted July Sales": int
 }}
-IMPORTANT: Do not include extra text, explanation, markdown, or comments outside the JSON object.
+
+Guidelines:
+- Use promotional signals, past sales, and seasonality to generate forecasts.
+- Avoid defaulting to 30 unless data shows strong evidence of consistent 1-unit/day demand.
+- Provide a conservative but diverse forecast when data is limited.
+
+IMPORTANT:
+- Output must be valid JSON only. No extra text.
 """
 
         gemini_response = call_gemini(prompt)
         actual_qty = actual_july_sales.get(sku, 0)
 
         try:
-            json_match = re.search(r'\{.*?\}', gemini_response.strip(), re.DOTALL)
-            if not json_match:
-                raise ValueError("No valid JSON object found in Gemini response.")
-
-            response_data = json.loads(json_match.group())
-            predicted_qty_raw = response_data.get("predicted_july_sales", 0)
+            start_idx = gemini_response.find('{')
+            end_idx = gemini_response.rfind('}') + 1
+            clean_json_text = gemini_response[start_idx:end_idx]
+            response_data = json.loads(clean_json_text)
+            predicted_qty_raw = response_data.get("Predicted July Sales") or \
+                (response_data.get("forecast") or {}).get("predicted_july_total", 0)
             predicted_qty = int(float(predicted_qty_raw))
             reason = response_data.get("reason", "N/A")
         except Exception as e:
             predicted_qty = 0
             reason = f"Parsing error: {str(e)}"
+            logger.error(f"Parsing failed for SKU {sku}. Raw Gemini response:\n{gemini_response}")
 
         predictions.append({
             "SKU": sku,
             "Product": product.title,
             "Past Sales": {
-                "2025-04": sales_data.get("2025-04", 0),
-                "2025-05": sales_data.get("2025-05", 0),
-                "2025-06": sales_data.get("2025-06", 0),
+                month: sales_data.get(month, 0) for month in [
+                    "2024-07", "2024-08", "2024-09", "2024-10", "2024-11", "2024-12",
+                    "2025-01", "2025-02", "2025-03", "2025-04", "2025-05", "2025-06"
+                ]
             },
             "Predicted July Sales": predicted_qty,
             "Actual July Sales": actual_qty,
@@ -387,6 +405,8 @@ IMPORTANT: Do not include extra text, explanation, markdown, or comments outside
         time.sleep(1.2)
 
     return render(request, "customer/predictions.html", {"predictions": predictions})
+
+    # return JsonResponse({"predictions": predictions})
 
 
 # Directly gets the highest sales in April , May , June month and then predicts using gemini then compares with original data

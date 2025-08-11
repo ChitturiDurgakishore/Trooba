@@ -69,7 +69,7 @@ class ProductVariant(models.Model):
     title = models.CharField(max_length=255)
     sku = models.CharField(max_length=100, null=True, blank=True)
     price = models.FloatField()
-    created_at = models.DateTimeField(blank=True,null=True)  # set on create
+    created_at = models.TextField(blank=True,null=True)  # set on create
     updated_at = models.DateTimeField(null=True,blank=True) 
     def __str__(self):
         return f"{self.product.title} - {self.title}"
@@ -172,7 +172,7 @@ class CustomerPromotion_May(models.Model):
     item_id = models.CharField(max_length=255)
     product_id = models.BigIntegerField()
     variant_id = models.BigIntegerField()
-    price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    price = models.CharField(max_length=50, null=True, blank=True)
     clicks = models.IntegerField(default=0)
     cost = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     conv_value = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
@@ -226,7 +226,7 @@ class CustomerPromotion_April(models.Model):
     item_id = models.CharField(max_length=255)
     product_id = models.BigIntegerField()
     variant_id = models.BigIntegerField()
-    price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    price = models.CharField(max_length=50, null=True, blank=True)
     clicks = models.IntegerField(default=0)
     cost = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     conv_value = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)

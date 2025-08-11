@@ -235,7 +235,7 @@ def top_20_selling_products_till_2024_view(request):
             "product_type": product.product_type,
             "total_quantity_sold": item['total_quantity_sold'],
         })
-        if len(results) >= 20:
+        if len(results) >= 10:
             break
 
     variant_skus = [r["variant_sku"] for r in results if r["variant_sku"]]
@@ -259,11 +259,28 @@ def top_20_selling_products_till_2024_view(request):
             variant_sku = shopify_id_to_sku_map.get(shopify_id)
             if variant_sku:
                 promo_data_by_sku[variant_sku][month] = {
-                    'impressions': promo.impressions,
-                    'clicks': promo.clicks,
-                    'revenue': float(promo.revenue or 0),
-                    'units_sold': promo.units_sold,
-                }
+    "id": promo.id,
+    "title": promo.title,
+    "item_id": promo.item_id,
+    "product_id": promo.product_id,
+    "variant_id": promo.variant_id,
+    "price": promo.price,
+    "clicks": promo.clicks,
+    "cost": str(promo.cost) if promo.cost is not None else None,
+    "conv_value": str(promo.conv_value) if promo.conv_value is not None else None,
+    "conv_value_per_cost": str(promo.conv_value_per_cost) if promo.conv_value_per_cost is not None else None,
+    "impressions": promo.impressions,
+    "ctr": str(promo.ctr) if promo.ctr is not None else None,
+    "avg_cpc": str(promo.avg_cpc) if promo.avg_cpc is not None else None,
+    "category_1st_level": promo.category_1st_level,
+    "category_2nd_level": promo.category_2nd_level,
+    "category_3rd_level": promo.category_3rd_level,
+    "category_4th_level": promo.category_4th_level,
+    "category_5th_level": promo.category_5th_level,
+    "product_type_1st_level": promo.product_type_1st_level,
+}
+
+
 
     monthly_sales = defaultdict(lambda: defaultdict(int))
     order_items = OrderLineItem.objects.filter(
@@ -370,6 +387,7 @@ Guidelines:
 IMPORTANT:
 - Output must be valid JSON only. No extra text.
 """
+
 
         gemini_response = call_gemini(prompt)
         actual_qty = actual_july_sales.get(sku, 0)
@@ -848,6 +866,289 @@ def sku_sales_history(request, sku):
     }, status=200)
 
 
-#2023 data shown , 2024 data shown , comparison shown for every SKU varient . 
- 
-# Change ony this function for any changes 
+
+# ---------------------------==================================================================================
+from django.shortcuts import render
+from collections import defaultdict
+from datetime import datetime, timedelta
+from django.db.models import Sum
+from django.utils.timezone import make_aware, is_naive
+
+from .models import (
+    OrderLineItem,
+    ProductVariant,
+    CustomerPromotion_April,
+    CustomerPromotion_May,
+    CustomerPromotion_June,
+)
+
+def safe_make_aware(dt):
+    if isinstance(dt, str):
+        try:
+            dt = datetime.fromisoformat(dt)
+        except Exception as e:
+            raise ValueError(f"Invalid datetime string: {dt}") from e
+    return make_aware(dt) if is_naive(dt) else dt
+
+def Fetching_items(request):
+    # Define current reference date as July 1, 2025
+    reference_date = safe_make_aware(datetime(2025, 7, 1))
+    start_date = safe_make_aware(datetime(2024, 7, 1))
+    end_date = reference_date
+
+    top_variants = (
+        OrderLineItem.objects
+        .filter(order__order_date__gte=start_date, order__order_date__lt=end_date)
+        .values('variant_id')
+        .annotate(total_quantity_sold=Sum('quantity'))
+        .order_by('-total_quantity_sold')
+    )
+
+    filtered_variants = [v for v in top_variants if v['total_quantity_sold'] != 46349]
+    variant_ids_from_sales = [item['variant_id'] for item in filtered_variants]
+
+    variants_qs = ProductVariant.objects.select_related('product').filter(
+        id__in=variant_ids_from_sales
+    ).exclude(sku__isnull=True).exclude(sku='')
+
+    variants = {v.id: v for v in variants_qs}
+
+    results = []
+    for item in filtered_variants:
+        variant = variants.get(item['variant_id'])
+        if not variant:
+            continue
+        product = variant.product
+        results.append({
+            "product_id": product.id,
+            "product_shopify_id": product.shopify_id,
+            "product_title": product.title,
+            "variant_title": variant.title,
+            "variant_sku": variant.sku,
+            "price": variant.price,
+            "vendor": product.vendor,
+            "product_type": product.product_type,
+            "total_quantity_sold": item['total_quantity_sold'],
+        })
+        if len(results) >= 10:
+            break
+
+    variant_skus = [r["variant_sku"] for r in results]
+    variant_objs = ProductVariant.objects.select_related('product').filter(sku__in=variant_skus)
+    variant_id_map = {v.id: v for v in variant_objs}
+    top_variant_shopify_ids = [v.shopify_id for v in variant_objs]
+    shopify_id_to_sku_map = {v.shopify_id: v.sku for v in variant_objs}
+
+    promo_data_by_sku = defaultdict(dict)
+    promo_models = {
+        '2025-04': CustomerPromotion_April,
+        '2025-05': CustomerPromotion_May,
+        '2025-06': CustomerPromotion_June,
+    }
+
+    for month, model in promo_models.items():
+        promo_qs = model.objects.filter(variant_id__in=top_variant_shopify_ids)
+        for promo in promo_qs:
+            shopify_id = promo.variant_id
+            variant_sku = shopify_id_to_sku_map.get(shopify_id)
+            if variant_sku:
+                promo_data_by_sku[variant_sku][month] = {
+                    "id": promo.id,
+                    "title": promo.title,
+                    "item_id": promo.item_id,
+                    "product_id": promo.product_id,
+                    "variant_id": promo.variant_id,
+                    "price": promo.price,
+                    "clicks": promo.clicks,
+                    "cost": str(promo.cost) if promo.cost is not None else None,
+                    "conv_value": str(promo.conv_value) if promo.conv_value is not None else None,
+                    "conv_value_per_cost": str(promo.conv_value_per_cost) if promo.conv_value_per_cost is not None else None,
+                    "impressions": promo.impressions,
+                    "ctr": str(promo.ctr) if promo.ctr is not None else None,
+                    "avg_cpc": str(promo.avg_cpc) if promo.avg_cpc is not None else None,
+                    "category_1st_level": promo.category_1st_level,
+                    "category_2nd_level": promo.category_2nd_level,
+                    "category_3rd_level": promo.category_3rd_level,
+                    "category_4th_level": promo.category_4th_level,
+                    "category_5th_level": promo.category_5th_level,
+                    "product_type_1st_level": promo.product_type_1st_level,
+                }
+
+    monthly_sales = defaultdict(lambda: defaultdict(int))
+    order_items = OrderLineItem.objects.filter(
+        variant_id__in=variant_ids_from_sales,
+        order__order_date__gte=start_date,
+        order__order_date__lt=end_date
+    )
+    for item in order_items:
+        month = item.order.order_date.strftime('%Y-%m')
+        variant_obj = variant_id_map.get(item.variant_id)
+        if variant_obj:
+            monthly_sales[variant_obj.sku][month] += item.quantity
+
+    # July sales (predicted target month)
+    july_start = safe_make_aware(datetime(2025, 7, 1))
+    aug_start = safe_make_aware(datetime(2025, 8, 1))
+    actual_july_sales = defaultdict(int)
+    july_orders = OrderLineItem.objects.filter(
+        variant_id__in=variant_ids_from_sales,
+        order__order_date__gte=july_start,
+        order__order_date__lt=aug_start
+    )
+    for item in july_orders:
+        variant_obj = variant_id_map.get(item.variant_id)
+        if variant_obj:
+            actual_july_sales[variant_obj.sku] += item.quantity
+
+    # Define last 7 and 30 days (before July 1, 2025)
+    last_7_start = reference_date - timedelta(days=7)
+    last_30_start = reference_date - timedelta(days=30)
+
+    last_7_sales = defaultdict(int)
+    last_30_sales = defaultdict(int)
+
+    recent_orders = OrderLineItem.objects.filter(
+        variant_id__in=variant_ids_from_sales,
+        order__order_date__gte=last_30_start,
+        order__order_date__lt=reference_date
+    )
+
+    for item in recent_orders:
+        variant_obj = variant_id_map.get(item.variant_id)
+        if not variant_obj:
+            continue
+        sku = variant_obj.sku
+        if item.order.order_date >= last_7_start:
+            last_7_sales[sku] += item.quantity
+        last_30_sales[sku] += item.quantity
+
+    top_items = []
+    for result in results:
+        sku = result["variant_sku"]
+        past_sales_dict = monthly_sales.get(sku, {})
+        past_sales_list = [{"month": k, "value": v} for k, v in sorted(past_sales_dict.items())]
+
+        top_items.append({
+            "sku": sku,
+            "product": result["product_title"],
+            "past_sales": past_sales_list,
+            "actual_july": actual_july_sales.get(sku, 0),
+            "promo_summary": promo_data_by_sku.get(sku, {}),
+            "product_type": result["product_type"],
+            "vendor": result["vendor"],
+            "price": result["price"],
+            "last_7_days_sales": last_7_sales.get(sku, 0),
+            "last_30_days_sales": last_30_sales.get(sku, 0),
+        })
+
+    return render(request, "customer/top_items.html", {"top_items": top_items})
+
+
+
+
+
+
+    # return JsonResponse({"top_items": top_items})
+
+# return JsonResponse({"top_items": top_items})
+
+
+# ========================================================================================================
+
+
+import os
+import requests
+from django.http import HttpResponse
+from django.shortcuts import render
+from dotenv import load_dotenv
+from .models import Prompt
+
+load_dotenv()
+
+def generate_prompt_view(request):
+    if request.method != "POST":
+        return HttpResponse("Invalid request", status=400)
+
+    total_items = int(request.POST.get("total_items", 0))
+    items = []
+
+    for i in range(1, total_items + 1):
+        sku = request.POST.get(f"sku_{i}")
+        product_type = request.POST.get(f"product_type_{i}", "")
+        vendor = request.POST.get(f"vendor_{i}", "")
+        price = request.POST.get(f"price_{i}", "")
+
+        # Reconstruct promo_summary
+        promo_summary = {}
+        for month in ["April", "May", "June"]:
+            promo_summary[month] = {
+                "free_shipping": request.POST.get(f"promo_{i}_{month}_free_shipping", ""),
+                "discount_percentage": request.POST.get(f"promo_{i}_{month}_discount_percentage", ""),
+                "ad_spend": request.POST.get(f"promo_{i}_{month}_ad_spend", ""),
+                "coupon_used": request.POST.get(f"promo_{i}_{month}_coupon_used", ""),
+            }
+
+        items.append({
+            "sku": sku,
+            "product_type": product_type,
+            "vendor": vendor,
+            "price": price,
+            "promo_summary": promo_summary,
+        })
+
+    try:
+        prompt_template = Prompt.objects.get(type="MainPrompt").prompt.strip()
+    except Prompt.DoesNotExist:
+        return HttpResponse("Prompt template not found.", status=500)
+
+    # Build item-wise detailed prompt text
+    item_texts = []
+    for item in items:
+        promo_details = "\n".join([
+            f"  {month} - Free Shipping: {promo['free_shipping']}, "
+            f"Discount: {promo['discount_percentage']}%, "
+            f"Ad Spend: {promo['ad_spend']}, "
+            f"Coupon Used: {promo['coupon_used']}"
+            for month, promo in item["promo_summary"].items()
+        ])
+        item_text = (
+            f"SKU: {item['sku']}\n"
+            f"  Product Type: {item['product_type']}\n"
+            f"  Vendor: {item['vendor']}\n"
+            f"  Price: {item['price']}\n"
+            f"{promo_details}"
+        )
+        item_texts.append(item_text)
+
+    full_prompt = f"{prompt_template}\n\nHere is the product data:\n\n" + "\n\n".join(item_texts)
+
+    # Send to Gemini
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        return HttpResponse("GEMINI_API_KEY not found in environment.", status=500)
+
+    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
+    headers = {
+        "Content-Type": "application/json",
+        "X-goog-api-key": api_key,
+    }
+    payload = {
+        "contents": [
+            {
+                "parts": [{"text": full_prompt}]
+            }
+        ]
+    }
+
+    try:
+        response = requests.post(url, headers=headers, json=payload)
+        response.raise_for_status()
+        gemini_response = response.json()
+        generated_prompt = gemini_response["candidates"][0]["content"]["parts"][0]["text"]
+    except Exception as e:
+        generated_prompt = f"Error: {e}\n\nRaw response: {response.text if 'response' in locals() else ''}"
+
+    return render(request, "customer/generated_prompt.html", {
+        "generated_prompt": generated_prompt,
+        "top_items": items,
+    })

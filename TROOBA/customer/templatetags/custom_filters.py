@@ -1,5 +1,17 @@
 # yourapp/templatetags/custom_filters.py
 
+
+# your_app/templatetags/custom_filters.py
+from django import template
+
+register = template.Library()
+
+@register.filter
+def get_item(dictionary, key):
+    if dictionary and key in dictionary:
+        return dictionary[key]
+    return None
+
 from django import template
 import json
 

@@ -225,7 +225,6 @@
         color: white;
       }
 
-      /* New styles for improved data display */
       .data-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -262,7 +261,6 @@
         color: var(--dark);
       }
 
-      /* Responsive */
       @media (max-width: 768px) {
         .dashboard-header {
           flex-direction: column;
@@ -336,110 +334,97 @@
               <tbody>
                 {% if top_items %}
                   {% for item in top_items %}
-                    <tr>
-                      <td>{{ forloop.counter }}</td>
-                      <td><code>{{ item.sku }}</code></td>
-                      <td>
-                        <div
-                          class="text-truncate"
-                          style="max-width: 250px"
-                          title="{{ item.product }}"
-                        >
-                          {{ item.product }}
+                  <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td><code>{{ item.sku }}</code></td>
+                    <td>
+                      <div class="text-truncate" style="max-width: 250px" title="{{ item.product }}">
+                        {{ item.product }}
+                      </div>
+                    </td>
+                    <td>
+                      <span class="badge badge-actual">{{ item.actual_july }}</span>
+                    </td>
+                    <td>
+                      <button type="button" class="btn-reason" onclick="toggleDetails('details-{{ forloop.counter }}')">
+                        <i class="fas fa-eye me-1"></i> Details
+                      </button>
+                    </td>
+                  </tr>
+                  <tr id="details-{{ forloop.counter }}" class="reason-row">
+                    <td colspan="5" class="reason-cell">
+                      <div class="section-title">Recent Sales Performance</div>
+                      <div class="data-grid">
+                        <div class="data-card">
+                          <h4>Last 7 Days Sales</h4>
+                          <p>{{ item.sales_last_7_days }}</p>
                         </div>
-                      </td>
-                      <td>
-                        <span class="badge badge-actual">{{ item.actual_july }}</span>
-                      </td>
-                      <td>
-                        <button
-                          type="button"
-                          class="btn-reason"
-                          onclick="toggleDetails('details-{{ forloop.counter }}')"
-                        >
-                          <i class="fas fa-eye me-1"></i> Details
-                        </button>
-                      </td>
-                    </tr>
-                    <tr id="details-{{ forloop.counter }}" class="reason-row">
-                      <td colspan="5" class="reason-cell">
-                        <!-- Recent Sales Data Section -->
-                        <div class="section-title">Recent Sales Performance</div>
-                        <div class="data-grid">
-                          <div class="data-card">
-                            <h4>Last 7 Days Sales</h4>
-                            <p>{{ item.last_7_days_sales }}</p>
-                          </div>
-                          <div class="data-card">
-                            <h4>Last 30 Days Sales</h4>
-                            <p>{{ item.last_30_days_sales }}</p>
-                          </div>
-                          <div class="data-card">
-                            <h4>Price</h4>
-                            <p>{{ item.price }}</p>
-                          </div>
+                        <div class="data-card">
+                          <h4>Last 30 Days Sales</h4>
+                          <p>{{ item.sales_last_30_days }}</p>
                         </div>
+                        <div class="data-card">
+                          <h4>Price</h4>
+                          <p>{{ item.price }}</p>
+                        </div>
+                      </div>
 
-                        <!-- Sales History Section -->
-                        <div class="section-title">Sales History</div>
-                        {% if item.past_sales %}
-                          <div class="history-data">
-                            {% for sale in item.past_sales %}
-                              <div><strong>{{ sale.month }}:</strong> {{ sale.value }}</div>
-                            {% endfor %}
-                          </div>
-                        {% else %}
-                          <p>No historical sales data available.</p>
-                        {% endif %}
+                      <div class="section-title">Sales History</div>
+                      {% if item.past_sales %}
+                        <div class="history-data">
+                          {% for sale in item.past_sales %}
+                            <div>
+                              <strong>{{ sale.month }}:</strong> {{ sale.value }}
+                            </div>
+                          {% endfor %}
+                        </div>
+                      {% else %}
+                        <p>No historical sales data available.</p>
+                      {% endif %}
 
-                        <!-- Promotional Data Section -->
-                        <div class="section-title">Promotional Summary</div>
-                        {% if item.promo_summary %}
-                          <div class="promo-data">
-                            {% for month, promo in item.promo_summary.items %}
-                              <div class="mb-3">
-                                <h4 class="mb-2"><strong>{{ month }}</strong></h4>
-                                <div class="row">
-                                  <div class="col-md-6">
-                                    <ul>
-                                      <li><strong>Title:</strong> {{ promo.title }}</li>
-                                      <li><strong>Clicks:</strong> {{ promo.clicks }}</li>
-                                      <li><strong>Cost:</strong> {{ promo.cost }}</li>
-                                      <li><strong>Conv. Value:</strong> {{ promo.conv_value }}</li>
-                                    </ul>
-                                  </div>
-                                  <div class="col-md-6">
-                                    <ul>
-                                      <li><strong>CTR:</strong> {{ promo.ctr }}</li>
-                                      <li><strong>Avg CPC:</strong> {{ promo.avg_cpc }}</li>
-                                      <li><strong>Category:</strong> 
-                                        {{ promo.category_1st_level }} &raquo;
-                                        {{ promo.category_2nd_level }} &raquo;
-                                        {{ promo.category_3rd_level }}
-                                      </li>
-                                    </ul>
-                                  </div>
+                      <div class="section-title">Promotional Summary</div>
+                      {% if item.promo_summary %}
+                        <div class="promo-data">
+                          {% for month, promo in item.promo_summary.items %}
+                            <div class="mb-3">
+                              <h4 class="mb-2"><strong>{{ month }}</strong></h4>
+                              <div class="row">
+                                <div class="col-md-6">
+                                  <ul>
+                                    <li><strong>Title:</strong> {{ promo.title }}</li>
+                                    <li><strong>Clicks:</strong> {{ promo.clicks }}</li>
+                                    <li><strong>Cost:</strong> {{ promo.cost }}</li>
+                                    <li><strong>Conv. Value:</strong> {{ promo.conv_value }}</li>
+                                  </ul>
+                                </div>
+                                <div class="col-md-6">
+                                  <ul>
+                                    <li><strong>CTR:</strong> {{ promo.ctr }}</li>
+                                    <li><strong>Avg CPC:</strong> {{ promo.avg_cpc }}</li>
+                                    <li>
+                                      <strong>Category:</strong>
+                                      {{ promo.category_1st_level }} &raquo; 
+                                      {{ promo.category_2nd_level }} &raquo; 
+                                      {{ promo.category_3rd_level }}
+                                    </li>
+                                  </ul>
                                 </div>
                               </div>
-                              {% if not forloop.last %}<hr>{% endif %}
-                            {% endfor %}
-                          </div>
-                        {% else %}
-                          <p>No promotional data available.</p>
-                        {% endif %}
-                      </td>
-                    </tr>
+                            </div>
+                            {% if not forloop.last %}
+                              <hr />
+                            {% endif %}
+                          {% endfor %}
+                        </div>
+                      {% else %}
+                        <p>No promotional data available.</p>
+                      {% endif %}
+                    </td>
+                  </tr>
                   {% endfor %}
                 {% else %}
                   <tr>
-                    <td
-                      colspan="5"
-                      style="
-                        text-align: center;
-                        color: var(--gray);
-                        padding: 2rem;
-                      "
-                    >
+                    <td colspan="5" style="text-align: center; color: var(--gray); padding: 2rem;">
                       <i class="fas fa-info-circle me-2"></i> No sales data available.
                     </td>
                   </tr>
@@ -455,16 +440,23 @@
               <input type="hidden" name="product_type_{{ forloop.counter }}" value="{{ item.product_type }}" />
               <input type="hidden" name="vendor_{{ forloop.counter }}" value="{{ item.vendor }}" />
               <input type="hidden" name="price_{{ forloop.counter }}" value="{{ item.price }}" />
+              <input type="hidden" name="sales_last_7_days_{{ forloop.counter }}" value="{{ item.sales_last_7_days }}" />
+              <input type="hidden" name="sales_last_30_days_{{ forloop.counter }}" value="{{ item.sales_last_30_days }}" />
+              <input type="hidden" name="created_at_{{ forloop.counter }}" value="{{ item.created_at }}" />
 
-              {% for month, promo in item.promo_summary.items %}
-                {% for key, val in promo.items %}
-                  <input
-                    type="hidden"
-                    name="promo_{{ forloop.parentloop.counter }}_{{ month }}_{{ key }}"
-                    value="{{ val|default_if_none:'' }}"
-                  />
+              {% if item.past_sales %}
+                {% for sale in item.past_sales %}
+                  <input type="hidden" name="sales_history_{{ forloop.parentloop.counter }}_{{ sale.month }}" value="{{ sale.value }}" />
                 {% endfor %}
-              {% endfor %}
+              {% endif %}
+
+              {% if item.promo_summary %}
+                {% for month, promo in item.promo_summary.items %}
+                  {% for key, val in promo.items %}
+                    <input type="hidden" name="promo_{{ forloop.parentloop.parentloop.counter }}_{{ month }}_{{ key }}" value="{{ val|default_if_none:'' }}" />
+                  {% endfor %}
+                {% endfor %}
+              {% endif %}
             {% endfor %}
 
             <input type="hidden" name="total_items" value="{{ top_items|length }}" />
@@ -483,8 +475,7 @@
       function toggleDetails(id) {
         const row = document.getElementById(id);
         if (!row) return;
-        row.style.display =
-          row.style.display === "table-row" ? "none" : "table-row";
+        row.style.display = row.style.display === "table-row" ? "none" : "table-row";
       }
 
       window.addEventListener("load", () => {

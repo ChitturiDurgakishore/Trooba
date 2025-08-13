@@ -118,7 +118,7 @@
       }
 
       .prompt-body {
-        padding: 0; /* Removed padding to make prompt-box full width */
+        padding: 0;
       }
 
       .prompt-box {
@@ -128,7 +128,7 @@
         height: 500px;
         overflow-y: auto;
         white-space: pre-wrap;
-        font-family:Arial;
+        font-family: Arial;
         font-size: 15px;
         line-height: 1.6;
         color: #2c3e50;
@@ -163,7 +163,7 @@
         .action-buttons {
           flex-direction: column;
         }
-        
+
         .prompt-box {
           height: 350px;
         }
@@ -186,7 +186,7 @@
       </header>
 
       <main role="main" aria-label="Generated Prompt">
-        <form method="post" action="#">
+        <form method="post" action="{% url 'handle_prompt' %}">
           {% csrf_token %}
           <div class="prompt-card">
             <div class="prompt-header">
@@ -211,12 +211,31 @@
           </div>
 
           <div class="action-buttons">
-            <a href="#" class="btn btn-primary px-4 py-2">
+            <a
+              href="{% url 'fetching_items' %}"
+              class="btn btn-primary px-4 py-2"
+            >
               <i class="fas fa-arrow-left me-2"></i> Back to Predictions
             </a>
-            <button type="submit" class="btn btn-success px-4 py-2">
+
+            <button
+              type="submit"
+              name="action"
+              value="save"
+              class="btn btn-success px-4 py-2"
+            >
               <i class="fas fa-save me-2"></i> Save Changes
             </button>
+
+            <button
+              type="submit"
+              name="action"
+              value="predict"
+              class="btn btn-info px-4 py-2"
+            >
+              <i class="fas fa-rocket me-2"></i> Make Predictions
+            </button>
+
             <button
               type="button"
               class="btn btn-info px-4 py-2"
@@ -225,6 +244,33 @@
               <i class="fas fa-download me-2"></i> Download
             </button>
           </div>
+
+          <!-- Hidden inputs for all SKU, promo, and sales data -->
+          {% for item in top_items %}
+            <input type="hidden" name="sku_{{ forloop.counter }}" value="{{ item.sku }}" />
+            <input type="hidden" name="product_type_{{ forloop.counter }}" value="{{ item.product_type }}" />
+            <input type="hidden" name="vendor_{{ forloop.counter }}" value="{{ item.vendor }}" />
+            <input type="hidden" name="price_{{ forloop.counter }}" value="{{ item.price }}" />
+            <input type="hidden" name="sales_last_7_days_{{ forloop.counter }}" value="{{ item.sales_last_7_days }}" />
+            <input type="hidden" name="sales_last_30_days_{{ forloop.counter }}" value="{{ item.sales_last_30_days }}" />
+            <input type="hidden" name="created_at_{{ forloop.counter }}" value="{{ item.created_at }}" />
+
+            {% if item.promo_summary %}
+              {% for month, promo in item.promo_summary.items %}
+                {% for key, val in promo.items %}
+                  <input type="hidden" name="promo_{{ forloop.parentloop.parentloop.counter }}_{{ month }}_{{ key }}" value="{{ val|default_if_none:'' }}" />
+                {% endfor %}
+              {% endfor %}
+            {% endif %}
+
+            {% if item.past_sales %}
+              {% for sale in item.past_sales %}
+                <input type="hidden" name="sales_history_{{ forloop.parentloop.counter }}_{{ sale.month }}" value="{{ sale.value }}" />
+              {% endfor %}
+            {% endif %}
+          {% endfor %}
+
+          <input type="hidden" name="total_items" value="{{ top_items|length }}" />
         </form>
       </main>
     </div>
@@ -235,7 +281,6 @@
         textarea.select();
         document.execCommand("copy");
 
-        // Show feedback
         const copyButton = document.querySelector(".btn-light");
         const originalText = copyButton.innerHTML;
         copyButton.innerHTML = '<i class="fas fa-check me-1"></i> Copied!';
@@ -251,8 +296,7 @@
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download =
-          "trooba-prompt-" + new Date().toISOString().slice(0, 10) + ".txt";
+        a.download = "trooba-prompt-" + new Date().toISOString().slice(0, 10) + ".txt";
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);

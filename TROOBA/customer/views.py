@@ -1037,7 +1037,7 @@ def Fetching_items(request):
             "sales_last_30_days": last_30_sales.get(sku, 0),
             "created_at": created_at,
         })
-
+    # return JsonResponse({"top_items": top_items})
     return render(request, "customer/top_items.html", {"top_items": top_items})
 
 
@@ -1054,7 +1054,7 @@ def Fetching_items(request):
 # ========================================================================================================
 # generate_prompt_view
 
-
+ 
 import json
 from django.http import JsonResponse
 from django.shortcuts import render
@@ -1137,6 +1137,13 @@ def generate_prompt_view(request):
     except Exception as e:
         return JsonResponse({"error": "Failed to call Gemini", "details": str(e)}, status=500)
 
+#     return JsonResponse({
+#     "prompt_from_db": str(prompt_template),
+#     "sent_data": items_data,
+#     "generated_prompt": generated_prompt,
+#     "top_items": items_data,   # ✅ Same data as before
+#     "total_items": total_items
+# })
     return render(request, "customer/generated_prompt.html", {
         "prompt_from_db": prompt_template,
         "sent_data": items_data,
@@ -1248,7 +1255,7 @@ def handle_prompt(request):
             total_items = int(request.POST.get("total_items", 0))
             if total_items > 0:
                 request.session["items_data"] = _extract_items_from_post(request, total_items)
-
+                print("Saved to session (save action):", request.session["items_data"])
             return redirect("handle_prompt")
 
         elif action == "predict":
@@ -1260,9 +1267,10 @@ def handle_prompt(request):
             if total_items > 0:
                 items_data = _extract_items_from_post(request, total_items)
                 request.session["items_data"] = items_data
+                print("Updated session (predict action):", request.session["items_data"])  # DEBUG
             else:
                 items_data = request.session.get("items_data", [])
-
+                print("Loaded from session (predict action):", items_data)  # DEBUG
             if not items_data:
                 return JsonResponse({"error": "No items data found to predict."}, status=400)
 

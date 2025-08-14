@@ -1037,7 +1037,7 @@ def Fetching_items(request):
             "sales_last_30_days": last_30_sales.get(sku, 0),
             "created_at": created_at,
         })
-
+    # return JsonResponse({"top_items": top_items})
     return render(request, "customer/top_items.html", {"top_items": top_items})
 
 
@@ -1054,9 +1054,10 @@ def Fetching_items(request):
 # ========================================================================================================
 # generate_prompt_view
 
-
+ 
 import json
 from django.http import JsonResponse
+from django.shortcuts import render
 from django.conf import settings
 from .models import Prompt
 import google.generativeai as genai
@@ -1094,9 +1095,7 @@ def generate_prompt_view(request):
                     month = parts[2]
                     field = "_".join(parts[3:])
                     val = request.POST.get(key)
-                    if month not in promo_summary:
-                        promo_summary[month] = {}
-                    promo_summary[month][field] = val
+                    promo_summary.setdefault(month, {})[field] = val
 
         # Past sales
         sales_history = {}
@@ -1123,6 +1122,10 @@ def generate_prompt_view(request):
             "past_sales": past_sales,
         })
 
+    # 📝 Store in session so handle_prompt can retrieve it later
+    request.session["top_items"] = items_data
+    request.session["total_items"] = total_items
+
     # 🧠 Final prompt + data
     full_prompt = prompt_template + "\n\nItems Data (JSON):\n" + json.dumps(items_data, indent=2)
 
@@ -1134,27 +1137,107 @@ def generate_prompt_view(request):
     except Exception as e:
         return JsonResponse({"error": "Failed to call Gemini", "details": str(e)}, status=500)
 
+#     return JsonResponse({
+#     "prompt_from_db": str(prompt_template),
+#     "sent_data": items_data,
+#     "generated_prompt": generated_prompt,
+#     "top_items": items_data,   # ✅ Same data as before
+#     "total_items": total_items
+# })
     return render(request, "customer/generated_prompt.html", {
-    "prompt_from_db": prompt_template,
-    "sent_data": items_data,
-    "generated_prompt": generated_prompt
-})
+        "prompt_from_db": prompt_template,
+        "sent_data": items_data,
+        "generated_prompt": generated_prompt,
+        "top_items": items_data,   # ✅ So hidden inputs are populated
+        "total_items": total_items
+    })
+
 
 
 
 
 # =====================================================================================================
 # views.py
+
+import json
+import os
+import requests
 from django.http import JsonResponse
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from .models import Prompt
-import os
-import json
-import requests
 from dotenv import load_dotenv
 
 load_dotenv()
+
+
+def clean_gemini_output(raw_text):
+    """Cleans Gemini output to extract JSON even if wrapped in markdown or extra text."""
+    text = raw_text.strip()
+
+    if text.startswith("```"):
+        text = text.strip("`")
+        lines = text.splitlines()
+        if lines and lines[0].strip().lower() == "json":
+            lines = lines[1:]
+        text = "\n".join(lines).strip()
+
+    start_idx = text.find("[")
+    end_idx = text.rfind("]")
+    if start_idx != -1 and end_idx != -1:
+        text = text[start_idx:end_idx + 1]
+
+    return text
+
+
+def _extract_items_from_post(request, total_items):
+    """Extracts SKU data from POST request into list of dicts."""
+    items_data = []
+    for i in range(1, total_items + 1):
+        sku = request.POST.get(f"sku_{i}")
+        product_type = request.POST.get(f"product_type_{i}")
+        vendor = request.POST.get(f"vendor_{i}")
+        price = request.POST.get(f"price_{i}")
+        sales_last_7_days = request.POST.get(f"sales_last_7_days_{i}")
+        sales_last_30_days = request.POST.get(f"sales_last_30_days_{i}")
+        created_at = request.POST.get(f"created_at_{i}")
+
+        promo_summary = {}
+        for key in request.POST.keys():
+            if key.startswith(f"promo_{i}_"):
+                parts = key.split("_")
+                if len(parts) >= 4:
+                    month = parts[2]
+                    promo_key = "_".join(parts[3:])
+                    val = request.POST.get(key)
+                    promo_summary.setdefault(month, {})[promo_key] = val
+
+        sales_history = {}
+        for key in request.POST.keys():
+            if key.startswith(f"sales_history_{i}_"):
+                month = key[len(f"sales_history_{i}_"):]
+                try:
+                    value = int(request.POST.get(key))
+                except (TypeError, ValueError):
+                    value = 0
+                sales_history[month] = value
+
+        past_sales = [{"month": m, "value": sales_history[m]} for m in sorted(sales_history.keys())]
+
+        items_data.append({
+            "sku": sku,
+            "product_type": product_type,
+            "vendor": vendor,
+            "price": price,
+            "sales_last_7_days": sales_last_7_days,
+            "sales_last_30_days": sales_last_30_days,
+            "created_at": created_at,
+            "promo_summary": promo_summary,
+            "past_sales": past_sales
+        })
+
+    return items_data
+
 
 def handle_prompt(request):
     if request.method == "POST":
@@ -1165,109 +1248,91 @@ def handle_prompt(request):
         prompt_obj, _ = Prompt.objects.get_or_create(type="Generated_Prompt")
 
         if action == "save":
-            # Save updated prompt text to DB
             prompt_obj.prompt = prompt_text
             prompt_obj.save()
             messages.success(request, "Prompt saved successfully.")
+
+            total_items = int(request.POST.get("total_items", 0))
+            if total_items > 0:
+                request.session["items_data"] = _extract_items_from_post(request, total_items)
+                print("Saved to session (save action):", request.session["items_data"])
             return redirect("handle_prompt")
 
         elif action == "predict":
-            # Use saved prompt from DB as base prompt
             base_prompt = prompt_obj.prompt or ""
+            if not base_prompt:
+                return JsonResponse({"error": "Please save the prompt before predicting."}, status=400)
 
             total_items = int(request.POST.get("total_items", 0))
-            items_data = []
+            if total_items > 0:
+                items_data = _extract_items_from_post(request, total_items)
+                request.session["items_data"] = items_data
+                print("Updated session (predict action):", request.session["items_data"])  # DEBUG
+            else:
+                items_data = request.session.get("items_data", [])
+                print("Loaded from session (predict action):", items_data)  # DEBUG
+            if not items_data:
+                return JsonResponse({"error": "No items data found to predict."}, status=400)
 
-            # Collect SKU data from POST
-            for i in range(1, total_items + 1):
-                sku = request.POST.get(f"sku_{i}")
-                product_type = request.POST.get(f"product_type_{i}")
-                vendor = request.POST.get(f"vendor_{i}")
-                price = request.POST.get(f"price_{i}")
-                sales_last_7_days = request.POST.get(f"sales_last_7_days_{i}")
-                sales_last_30_days = request.POST.get(f"sales_last_30_days_{i}")
-                created_at = request.POST.get(f"created_at_{i}")
-
-                promo_summary = {}
-                for key in request.POST:
-                    if key.startswith(f"promo_{i}_"):
-                        parts = key.split("_")
-                        if len(parts) >= 4:
-                            month = parts[2]
-                            promo_key = "_".join(parts[3:])
-                            val = request.POST.get(key)
-                            promo_summary.setdefault(month, {})[promo_key] = val
-
-                items_data.append({
-                    "sku": sku,
-                    "product_type": product_type,
-                    "vendor": vendor,
-                    "price": price,
-                    "sales_last_7_days": sales_last_7_days,
-                    "sales_last_30_days": sales_last_30_days,
-                    "created_at": created_at,
-                    "promo_summary": promo_summary,
-                })
-
-            # Compose full prompt for Gemini
+            # Build final prompt
             items_json = json.dumps(items_data, indent=2)
             full_prompt = f"""
 {base_prompt}
 
-For each SKU in the following list, please predict total sales quantity for July 2025.  
-Return ONLY a JSON array, where each element is an object with these keys:
-- sku
-- july_predicted (integer)
-- reason (brief explanation)
+For each SKU in the following list, please predict total sales quantity for July 2025.
+
+Return ONLY a valid JSON array (no markdown).  
+Each element must have:
+- "sku" (string)
+- "july_predicted" (integer)
+- "reason" (brief explanation with algorithm and adjustments)
 
 Input SKUs data:
 {items_json}
-
-Respond ONLY with the JSON array, no extra text.
 """
 
-            # Call Gemini API
+            # Call Gemini REST API directly
             api_key = os.getenv("GEMINI_API_KEY")
             if not api_key:
                 predictions = {"error": "GEMINI_API_KEY missing in .env"}
             else:
+                url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
+                headers = {"Content-Type": "application/json"}
+                payload = {
+                    "contents": [
+                        {
+                            "parts": [{"text": full_prompt}]
+                        }
+                    ]
+                }
                 try:
-                    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
-                    body = {
-                        "contents": [{"parts": [{"text": full_prompt}]}]
-                    }
-                    headers = {"Content-Type": "application/json"}
+                    r = requests.post(f"{url}?key={api_key}", headers=headers, json=payload, timeout=60)
+                    r.raise_for_status()
+                    result = r.json()
 
-                    response = requests.post(f"{url}?key={api_key}", headers=headers, json=body)
-                    response.raise_for_status()
-
-                    raw_output = response.json()["candidates"][0]["content"]["parts"][0]["text"]
+                    # Extract text from Gemini response
+                    raw_output = result.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "")
+                    cleaned_output = clean_gemini_output(raw_output)
 
                     try:
-                        predictions = json.loads(raw_output)
+                        predictions = json.loads(cleaned_output)
                     except json.JSONDecodeError:
                         predictions = {
                             "raw_output": raw_output,
                             "note": "Gemini response was not valid JSON. Showing raw output instead."
                         }
 
-                except requests.exceptions.RequestException as e:
-                    predictions = {
-                        "error": "Gemini API request failed",
-                        "details": str(e),
-                        "status_code": getattr(e.response, "status_code", None)
-                    }
+                except Exception as e:
+                    predictions = {"error": "Gemini API request failed", "details": str(e)}
 
-            return JsonResponse({
+            return render(request, "customer/predictions_results.html", {
                 "predictions": predictions,
-                "items_sent": items_data,
+                "items": items_data,
                 "prompt_used": base_prompt
-            }, safe=False, json_dumps_params={"indent": 2})
+            })
 
     else:
-        # GET request renders the page with prompt from DB if exists
         prompt_obj = Prompt.objects.filter(type="Generated_Prompt").first()
-        context = {
+        return render(request, "customer/generated_prompt.html", {
             "generated_prompt": prompt_obj.prompt if prompt_obj else "",
-        }
-        return render(request, "customer/generated_prompt.html", context)
+        })

@@ -1324,6 +1324,11 @@ Input SKUs data:
 
                 except Exception as e:
                     predictions = {"error": "Gemini API request failed", "details": str(e)}
+#             return JsonResponse({
+#     "predictions": predictions,
+#     "items_sent": items_data,
+#     "prompt_used": base_prompt
+# }, json_dumps_params={"indent": 2})
 
             return render(request, "customer/predictions_results.html", {
                 "predictions": predictions,
